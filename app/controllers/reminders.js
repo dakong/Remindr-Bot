@@ -57,7 +57,32 @@ function receivedMessage(event) {
 
     var messageText = message.text;
     if (messageText) {
-        switch (messageText) {
+      if(messageText.toLowerCase().startsWith('remind')){
+        var messageArray = messageText.toLowerCase().match(/(?:[^\s"]+|"[^"]*")+/g);
+        var options = messageArray[1];
+        switch(options){
+          case '-add':
+            commandLineAddReminder(options[2], options[4], senderId);
+            break;
+          case '-delete':
+            commandLineDeleteReminder(options[2], senderId);
+            break;
+          //We could probably handle this case in add
+          case '-edit':
+            commandLineEditReminder(options[2],options[3], senderId))
+            break;
+          case '-list':
+            sendReminderList(senderId);
+            break;
+          case '-help':
+            commandLineHelpOptions(senderId);
+            break;
+          default:
+            sendHelpMessage(senderId);
+        }
+      }
+      else{
+        switch () {
             case 'generic':
                 sendGenericMessage(senderId);
                 break;
@@ -70,6 +95,7 @@ function receivedMessage(event) {
                 }
                 sendTextMessage(senderId, messageText);
         }
+      }
     }
 }
 
@@ -129,13 +155,14 @@ function receivedAuthentication(event) {
     sendTextMessage(senderID, "Authentication successful");
 }
 
-function sendTextMessage(recipientId, messageText) {
+function sendTextMessage(recipientId, messageText, time) {
+    var timeValue = time !== null ? ' at ' + time : "";
     var messageData = {
         recipient: {
             id: recipientId
         },
         message: {
-            text: "I'll remind you to " + messageText
+            text: "I'll remind you to " + messageText + time;
         }
     };
 
@@ -206,5 +233,15 @@ function sendReminderList(recipientId) {
             callSendAPI(messageData);
         }
     });
+
+}
+
+function commandLineAddReminder(reminder, time, recipientId){
+  if(reminder === null || time === null){
+    //handle case
+    return;
+  }
+  Reminders.actions.create(messageText, time);
+  sendTextMessage(recipientId, reminder, time);
 
 }

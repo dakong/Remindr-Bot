@@ -2,7 +2,8 @@ var mongoose = require('mongoose'),
       Schema = mongoose.Schema;
 
 var ReminderSchema = new Schema({
-  name : String
+  name : String,
+  time : String
 });
 
 var Reminder = mongoose.model("Reminders", ReminderSchema);
@@ -25,10 +26,11 @@ module.exports.actions.create = function(req,res){
   });
 }
 
-module.exports.actions.createThroughBot = function(text){
+module.exports.actions.createThroughBot = function(text, time){
   var reminder = new Reminder();
   reminder.name = text;
-  console.log(reminder.name);
+  reminder.time = time;
+  console.log(reminder.name, reminder.time);
   reminder.save(function(err){
     console.log('Saving');
     if(err){
