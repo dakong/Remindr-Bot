@@ -69,7 +69,7 @@ function receivedMessage(event) {
             break;
           //We could probably handle this case in add
           case '-edit':
-            commandLineEditReminder(options[2],options[3], senderId))
+            commandLineEditReminder(options[2],options[3], senderId);
             break;
           case '-list':
             sendReminderList(senderId);
@@ -82,7 +82,7 @@ function receivedMessage(event) {
         }
       }
       else{
-        switch () {
+        switch (messageText) {
             case 'generic':
                 sendGenericMessage(senderId);
                 break;
@@ -162,7 +162,7 @@ function sendTextMessage(recipientId, messageText, time) {
             id: recipientId
         },
         message: {
-            text: "I'll remind you to " + messageText + time;
+            text: "I'll remind you to " + messageText + time
         }
     };
 
@@ -236,12 +236,16 @@ function sendReminderList(recipientId) {
 
 }
 
-function commandLineAddReminder(reminder, time, recipientId){
+//Command line functions
+function commandLineAddReminder(messageText, time, recipientId){
   if(reminder === null || time === null){
     //handle case
     return;
   }
-  Reminders.actions.create(messageText, time);
+  Reminders.actions.createThroughBot(reminder, time);
   sendTextMessage(recipientId, reminder, time);
+}
 
+function commandLineDeleteReminder(reminder, recipientId){
+  Reminders.actions.deleteThroughBot(reminder,recipientId)
 }

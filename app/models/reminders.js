@@ -2,8 +2,7 @@ var mongoose = require('mongoose'),
       Schema = mongoose.Schema;
 
 var ReminderSchema = new Schema({
-  name : String,
-  time : String
+  name : String
 });
 
 var Reminder = mongoose.model("Reminders", ReminderSchema);
@@ -84,6 +83,29 @@ module.exports.actions.delete = function(req,res){
     }
     res.send({message:'reminder ' + req.params.reminder_id + ' succesfully deleted'});
   });
+}
+
+
+module.exports.actions.deleteThroughBot = function(reminder){
+
+  Reminder.remove({
+    "name" : reminder
+  }, function(err,reminder){
+    if(err){
+      res.send(err);
+    }
+    res.send(res.send({message:'reminder succesfully deleted'}));
+  });
+  /*Reminder.findOne({
+    "name" : reminder
+  }, function(err, reminder){
+    if(err){
+      res.send(err);
+    }
+    Reminder.remove({
+      "_id" : reminder._id
+    })
+  })*/
 }
 
 module.exports.actions.update = function(req,res){
