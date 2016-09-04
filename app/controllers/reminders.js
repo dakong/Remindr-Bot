@@ -64,14 +64,14 @@ function receivedMessage(event) {
         console.log(options[2], options[4]);
         switch(options){
           case '-add':
-            commandLineAddReminder(options[2], options[4], senderId);
+            commandLineAddReminder(messageArray[2], messageArray[4], senderId);
             break;
           case '-delete':
-            commandLineDeleteReminder(options[2], senderId);
+            commandLineDeleteReminder(messageArray[2], senderId);
             break;
           //We could probably handle this case in add
           case '-edit':
-            commandLineEditReminder(options[2],options[3], senderId);
+            commandLineEditReminder(messageArray[2],messageArray[3], senderId);
             break;
           case '-list':
             sendReminderList(senderId);
