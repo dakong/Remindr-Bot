@@ -61,11 +61,10 @@ function receivedMessage(event) {
         var messageArray = messageText.toLowerCase().match(/(?:[^\s"]+|"[^"]*")+/g);
         var options = messageArray[1];
         console.log('inside received message');
-        console.log(options[2], options[4]);
         switch(options){
           case '-add':
-            var reminder = messageArray[2].subString(1, messageArray[2].length-1);
-            var time = messageArray[4].subString(1, messageArray[4].length-1);
+            var reminder = messageArray[2].slice(1, -1);
+            var time = messageArray[4].slice(1, -1);
             commandLineAddReminder(reminder, time, senderId);
             break;
           case '-delete':
