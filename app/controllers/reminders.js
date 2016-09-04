@@ -237,7 +237,7 @@ function sendReminderList(recipientId) {
 }
 
 //Command line functions
-function commandLineAddReminder(messageText, time, recipientId){
+function commandLineAddReminder(reminder, time, recipientId){
   if(reminder === null || time === null){
     //handle case
     return;
