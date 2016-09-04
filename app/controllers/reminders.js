@@ -60,6 +60,8 @@ function receivedMessage(event) {
       if(messageText.toLowerCase().startsWith('remind')){
         var messageArray = messageText.toLowerCase().match(/(?:[^\s"]+|"[^"]*")+/g);
         var options = messageArray[1];
+        console.log('inside received message');
+        console.log(options[2], options[4]);
         switch(options){
           case '-add':
             commandLineAddReminder(options[2], options[4], senderId);
@@ -242,6 +244,7 @@ function commandLineAddReminder(reminder, time, recipientId){
     //handle case
     return;
   }
+  console.log('inside command line add reminder');
   console.log(reminder, time);
   Reminders.actions.createThroughBot(reminder, time);
   sendTextMessage(recipientId, reminder, time);
