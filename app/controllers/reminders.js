@@ -162,7 +162,7 @@ function sendTextMessage(recipientId, messageText, time) {
             id: recipientId
         },
         message: {
-            text: "I'll remind you to " + messageText + time
+            text: 'I\'ll remind you to ' + messageText + timeValue
         }
     };
 
@@ -242,6 +242,7 @@ function commandLineAddReminder(reminder, time, recipientId){
     //handle case
     return;
   }
+  console.log(reminder, time);
   Reminders.actions.createThroughBot(reminder, time);
   sendTextMessage(recipientId, reminder, time);
 }
