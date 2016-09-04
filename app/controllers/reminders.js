@@ -64,7 +64,9 @@ function receivedMessage(event) {
         console.log(options[2], options[4]);
         switch(options){
           case '-add':
-            commandLineAddReminder(messageArray[2], messageArray[4], senderId);
+            var reminder = messageArray[2].subString(1, messageArray[2].length-1);
+            var time = messageArray[4].subString(1, messageArray[4].length-1);
+            commandLineAddReminder(reminder, time, senderId);
             break;
           case '-delete':
             commandLineDeleteReminder(messageArray[2], senderId);
