@@ -1,128 +1,139 @@
 var mongoose = require('mongoose'),
-      Schema = mongoose.Schema;
+  Schema = mongoose.Schema;
 
 var ReminderSchema = new Schema({
-  name : String
+  name: String,
+  time: String
 });
 
 var Reminder = mongoose.model("Reminders", ReminderSchema);
 module.exports.actions = {};
 
-module.exports.actions.create = function(req,res){
+module.exports.actions.create = function (req, res) {
   var reminder = new Reminder();
   reminder.name = req.body.name;
   console.log(reminder.name);
-  reminder.save(function(err){
+  reminder.save(function (err) {
     console.log('Saving');
-    if(err){
+    if (err) {
       console.log('error');
       res.send(err);
     }
-    else{
+    else {
       console.log('Reminder successfully created');
-      res.json({ message: 'Reminder created!' });
+      res.json({message: 'Reminder created!'});
     }
   });
-}
+};
 
-module.exports.actions.createThroughBot = function(text, time){
-  var reminder = new Reminder();
-  reminder.name = text;
-  reminder.time = time;
-  console.log(reminder.name, reminder.time);
-  reminder.save(function(err){
-    console.log('Saving');
-    if(err){
-      console.log('error');
+module.exports.actions.createThroughBot = function (text, time, sendMessage) {
+
+  Reminder.findOne({
+    "name": text,
+    "time": time
+  }, function (err, reminders) {
+    if (err) {
+      sendMessage({'success': false, 'msg': 'error'});
     }
-    else{
-      console.log('Reminder successfully created');
+    else {
+      if (reminders === null) {
+
+        var reminder = new Reminder();
+        reminder.name = text;
+        reminder.time = time;
+
+        reminder.save(function (err) {
+          if (err) {
+            sendMessage({'success': false, 'msg': 'error'});
+          }
+          else {
+            console.log('Reminder successfully created');
+            sendMessage({'success': true});
+          }
+        });
+      }
+      else {
+        sendMessage({'success': false, 'msg': 'duplicate'})
+      }
     }
   });
-}
+};
 
-module.exports.actions.getAll = function(req,res){
-  Reminder.find(function(err,reminders){
-    if(err){
+module.exports.actions.getAll = function (req, res) {
+  Reminder.find(function (err, reminders) {
+    if (err) {
       res.send(err);
     }
     console.log(reminders);
     res.json(reminders);
   });
-}
+};
 
-module.exports.actions.getAllThroughBot = function(callBack){
-  Reminder.find(function(err,reminders){
-    if(err){
+module.exports.actions.getAllThroughBot = function (callBack) {
+  Reminder.find(function (err, reminders) {
+    if (err) {
       callBack(err, null);
-    }else{
+    } else {
       callBack(null, reminders);
     }
   });
+};
 
-
-}
-
-module.exports.actions.getOne = function(req,res){
+module.exports.actions.getOne = function (req, res) {
   Reminder.findOne({
-    "_id" : req.params.reminder_id
-  }, function(err,reminder){
-    if(err){
+    "_id": req.params.reminder_id
+  }, function (err, reminder) {
+    if (err) {
       res.send(err);
     }
     res.send(reminder);
   });
-}
+};
 
-module.exports.actions.delete = function(req,res){
+module.exports.actions.delete = function (req, res) {
   Reminder.remove({
-    "_id" : req.params.reminder_id
-  },function(err,reminder){
-    if(err){
+    "_id": req.params.reminder_id
+  }, function (err, reminder) {
+    if (err) {
       res.send(err);
     }
-    res.send({message:'reminder ' + req.params.reminder_id + ' succesfully deleted'});
+    res.send({message: 'reminder ' + req.params.reminder_id + ' succesfully deleted'});
   });
-}
+};
 
 
-module.exports.actions.deleteThroughBot = function(reminder){
-
+module.exports.actions.deleteThroughBot = function (reminder, callBack) {
+  console.log(reminder);
   Reminder.remove({
-    "name" : reminder
-  }, function(err,reminder){
-    if(err){
-      res.send(err);
+    "name": reminder
+  }, function (err, reminder) {
+    if (err) {
+      console.log(err);
     }
-    res.send(res.send({message:'reminder succesfully deleted'}));
+    console.log('deleting', reminder);
+    callBack();
   });
-  /*Reminder.findOne({
-    "name" : reminder
-  }, function(err, reminder){
-    if(err){
-      res.send(err);
-    }
-    Reminder.remove({
-      "_id" : reminder._id
-    })
-  })*/
-}
+};
 
-module.exports.actions.update = function(req,res){
+module.exports.actions.update = function (req, res) {
   Reminder.findOne({
-    "_id" : req.params.reminder_id
-  }, function(err,reminder){
+    "_id": req.params.reminder_id
+  }, function (err, reminder) {
 
-    if(err){
+    if (err) {
       res.send(err);
     }
 
     reminder.name = req.body.name;
-    reminder.save(function(err){
-      if(err){
+    reminder.save(function (err) {
+      if (err) {
         res.send(err);
       }
-      res.send({message: 'Reminder succesfully updated to: ' + reminder.name});
+      res.send({message: 'Reminder successfully updated to: ' + reminder.name});
     });
   });
-}
+};
+
+module.exports.actions.clear = function(){
+  Reminder.collection.remove({});
+};
