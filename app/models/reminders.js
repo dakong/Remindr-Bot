@@ -27,13 +27,12 @@ module.exports.actions.create = function (req, res) {
 };
 
 module.exports.actions.createThroughBot = function (text, time, sendMessage) {
-
   Reminder.findOne({
     "name": text,
     "time": time
   }, function (err, reminders) {
     if (err) {
-      sendMessage({'success': false, 'msg': 'error'});
+      sendMessage({'success': false, 'msg': 'Error adding ' + text});
     }
     else {
       if (reminders === null) {
@@ -44,7 +43,7 @@ module.exports.actions.createThroughBot = function (text, time, sendMessage) {
 
         reminder.save(function (err) {
           if (err) {
-            sendMessage({'success': false, 'msg': 'error'});
+            sendMessage({'success': false, 'msg': 'Error saving reminder ' + text});
           }
           else {
             console.log('Reminder successfully created');
@@ -53,10 +52,40 @@ module.exports.actions.createThroughBot = function (text, time, sendMessage) {
         });
       }
       else {
-        sendMessage({'success': false, 'msg': 'duplicate'})
+        sendMessage({'success': false, 'msg': 'Reminder already exists'})
       }
     }
   });
+};
+
+module.exports.actions.edit = function(reminder, time, sendMessage){
+  Reminder.findOneAndUpdate({
+    "name": reminder
+  },{
+    "time": time
+  }, function(err){
+    if(err){
+      sendMessage({'success': false, 'msg': 'Error editing ' + reminder});
+    }
+    else{
+      console.log('Reminder successfully edited');
+      sendMessage({'success':true});
+    }
+  });
+  //Reminder.findOne({
+  //  "name": reminder
+  //}, function(err, reminder){
+  //  if(err){
+  //    sendMessage({'success': false, 'msg': 'Error editing ' + reminder});
+  //  }else{
+  //    if(reminder === null){
+  //      sendMessage({'success':false, 'msg': 'Error reminder: ' + reminder + ' doest not exist'});
+  //    }
+  //    else{
+  //
+  //    }
+  //  }
+  //});
 };
 
 module.exports.actions.getAll = function (req, res) {

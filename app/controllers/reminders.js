@@ -7,6 +7,11 @@ const PAGE_ACCESS_TOKEN = config.get('pageAccessToken');
 
 module.exports = {};
 
+/**
+ * Validate our WebHook and Token with FaceBook.
+ * @param req
+ * @param res
+ */
 module.exports.validateToken = function (req, res) {
   if (req.query['hub.mode'] === 'subscribe' &&
     req.query['hub.verify_token'] === VALIDATION_TOKEN) {
@@ -17,6 +22,12 @@ module.exports.validateToken = function (req, res) {
     res.sendStatus(403);
   }
 };
+
+/**
+ * Handles what the Chat bot should send back when we receive a message / event from a user.
+ * @param req
+ * @param res
+ */
 module.exports.userSentMessage = function (req, res) {
   var data = req.body;
 
@@ -36,8 +47,6 @@ module.exports.userSentMessage = function (req, res) {
           receivedMessage(messagingEvent);
         } else if (messagingEvent.delivery) {
           receivedDeliveryConfirmation(messagingEvent);
-        } else if (messagingEvent.postback) {
-          receivedPostback(messagingEvent);
         } else {
           console.log("Webhook received unknown messagingEvent: ", messagingEvent);
         }
@@ -47,6 +56,10 @@ module.exports.userSentMessage = function (req, res) {
   }
 };
 
+/**
+ * Handles the case for when a user sends a text message to our application.
+ * @param event
+ */
 function receivedMessage(event) {
   var senderId = event.sender.id;
   var recipientId = event.recipient.id;
@@ -56,54 +69,74 @@ function receivedMessage(event) {
   var time;
 
   console.log("Received message for user %d and page %d at %d with message: ", senderId, recipientId, timeOfMessage);
-
   var messageText = message.text.toLowerCase();
 
   if (messageText) {
 
+    //Handles the case when a user sends a message in command line format
     if (messageText.startsWith('reminder')) {
 
+      //Splits our message into an array
       var messageArray = messageText.toLowerCase().match(/(?:[^\s"]+|"[^"]*")+/g);
+
+      //Second argument is the action that the user wants to execute
       var options = messageArray[1];
 
       switch (options) {
 
+        //case for when a user wants to add a reminder
         case '-add':
-          reminder = messageArray[2].slice(1, -1);
-          time = messageArray[4].slice(1, -1);
+          reminder = messageArray[2].slice(1, -1); //slice to ignore the quotation marks
+          time = messageArray[4].slice(1, -1); //slice to ignore the quotation marks
           console.log(messageArray);
           console.log(reminder, time);
+
+          //Makes sure that there is always a time option set
           if (messageArray[3] === '-time' && messageArray.length === 5) {
             commandLineAddReminder(reminder, time, senderId);
           }
           else {
             sendDefault(senderId);
           }
-
           break;
 
+        //case for when a user wants to delete a reminder
         case '-delete':
           reminder = messageArray[2].slice(1, -1);
           commandLineDeleteReminder(reminder, senderId);
           break;
 
-        //We could probably handle this case in add
-        case '-edit':
-          //commandLineEditReminder(messageArray[2],messageArray[3], senderId);
+        //case for when a user wants to edit a reminder
+        case '-update':
+          reminder = messageArray[2].slice(1,-1);
+          time = messageArray[4].slice(1,-1);
+          console.log(messageArray);
+          console.log(reminder, time);
+          if(messageArray[3] === '-time' && messageArray.length === 5){
+            commandLineUpdateReminder(reminder, time, senderId);
+            //commandLineEditReminder(reminder,time, senderId);
+          }
+          else{
+            sendDefault(senderId);
+          }
           break;
 
+        //List our reminders
         case '-list':
           sendReminderList(senderId);
           break;
 
+        //Shows the command line options to the user
         case '-help':
           commandLineHelpOptions(senderId);
           break;
 
+        //Removes all reminders from our database
         case '-clear':
           commandLineClear(senderId);
           break;
 
+        //If the user inputs a malformed command
         default:
           commandLineHelpOptions(senderId);
       }
@@ -114,17 +147,18 @@ function receivedMessage(event) {
           sendReminderList(senderId);
           break;
         default:
-          /*if (!message.is_echo) {
-           Reminders.actions.createThroughBot(messageText);
-           }
-           sendTextMessage(senderId, messageText);*/
           sendDefault(senderId);
       }
     }
   }
 }
 
+/**
+ * Handles when we received delivery confirmation. When the user sees the message.
+ * @param event
+ */
 function receivedDeliveryConfirmation(event) {
+  console.log('inside received delivery confirmation event');
   var senderID = event.sender.id;
   var recipientID = event.recipient.id;
   var delivery = event.delivery;
@@ -140,23 +174,6 @@ function receivedDeliveryConfirmation(event) {
   }
 
   console.log("All message before %d were delivered.", watermark);
-}
-
-function receivedPostback(event) {
-  var senderID = event.sender.id;
-  var recipientID = event.recipient.id;
-  var timeOfPostback = event.timestamp;
-
-  // The 'payload' param is a developer-defined field which is set in a postback
-  // button for Structured Messages.
-  var payload = event.postback.payload;
-
-  console.log("Received postback for user %d and page %d with payload '%s' " +
-    "at %d", senderID, recipientID, payload, timeOfPostback);
-
-  // When a postback is called, we'll send a message back to the sender to
-  // let them know it was successful
-  sendTextMessage(senderID, "Postback called");
 }
 
 function receivedAuthentication(event) {
@@ -202,6 +219,7 @@ function callSendAPI(messageData) {
     json: messageData
   }, function (error, response, body) {
     if (!error && response.statusCode === 200) {
+      console.log('Call send api success');
       var recipientId = body.recipient_id;
       var messageId = body.message_id;
 
@@ -212,6 +230,14 @@ function callSendAPI(messageData) {
   })
 }
 
+/*****************************************************************************
+ ***************************** COMMAND LINE OPTIONS  *************************
+ *****************************************************************************/
+
+/**
+ * Sends a list of all the reminders for the user.
+ * @param recipientId id of the user we want to send the list of reminder.
+ */
 function sendReminderList(recipientId) {
   Reminders.actions.getAllThroughBot(function (err, reminder) {
     var reminderList;
@@ -246,13 +272,19 @@ function sendReminderList(recipientId) {
 
 }
 
-//Command line functions
+/**
+ * This function will create the reminder and add it to the database.
+ * @param reminder The task we want to remind the user
+ * @param time The time we want to send our reminder to the user
+ * @param recipientId The id we want to send the user too
+ */
 function commandLineAddReminder(reminder, time, recipientId) {
   var msg;
   if (reminder === null || time === null) {
     //handle case
     return;
   }
+
   Reminders.actions.createThroughBot(reminder, time, function (returnMsg) {
     console.log(returnMsg);
     if (returnMsg.success) {
@@ -266,6 +298,35 @@ function commandLineAddReminder(reminder, time, recipientId) {
   });
 }
 
+/**
+ * Function will edit an exist reminder and add it to the database.
+ * @param reminder the item we want to edit.
+ * @param time the new time we want to set the reminder to.
+ * @param recipientId id of the user we want to edit the reminder for.
+ */
+function commandLineUpdateReminder(reminder, time, recipientId){
+  var msg;
+  if(reminder === null || time === null){
+    //throw an error
+    return;
+  }
+  Reminders.actions.edit(reminder,time, function(returnMsg){
+    if(returnMsg.success){
+      console.log('edit returned true');
+      msg = 'I\'ll remind you to ' + reminder + ' at ' + time + ' instead';
+    }
+    else{
+      msg = returnMsg.msg;
+    }
+    sendTextMessage(recipientId, msg);
+  });
+}
+
+/**
+ * This will form the message to send back to the user, after they have chosen to delete a reminder.
+ * @param reminder the reminder the user wants removed.
+ * @param recipientId the id of the user we want to delete the reminder from.
+ */
 function commandLineDeleteReminder(reminder, recipientId) {
   Reminders.actions.deleteThroughBot(reminder, function () {
     var messageData = {
@@ -280,6 +341,36 @@ function commandLineDeleteReminder(reminder, recipientId) {
   });
 }
 
+/**
+ * Forms the help message to send to the user.
+ * @param recipientId id of the user we want to send help to.
+ */
+function commandLineHelpOptions(recipientId) {
+  var messageData = {
+    recipient: {
+      id: recipientId
+    },
+    message: {
+      text: "Here is a list of Remind commands:\n-add \n-time \n-delete \n-clear \n-update \n-list "
+    }
+  };
+  callSendAPI(messageData);
+}
+
+/**
+ * Clears all reminders from the database
+ * @param recipientId id of the user we want to clear messages for
+ */
+function commandLineClear(recipientId) {
+  var msg = "Reminder List has been cleared";
+  Reminders.actions.clear();
+  sendTextMessage(recipientId, msg);
+}
+
+/**
+ * Default message to send when there is an unrecognized command
+ * @param recipientId id of the user we want to send the message to
+ */
 function sendDefault(recipientId) {
   var messageData = {
     recipient: {
@@ -290,22 +381,4 @@ function sendDefault(recipientId) {
     }
   };
   callSendAPI(messageData);
-}
-
-function commandLineHelpOptions(recipientId) {
-  var messageData = {
-    recipient: {
-      id: recipientId
-    },
-    message: {
-      text: "Here is a list of Remind commands:\n-add \n-time \n-delete \n-clear \n-edit \n-list "
-    }
-  };
-  callSendAPI(messageData);
-}
-
-function commandLineClear(recipientId){
-  var msg = "Reminder List has been cleared";
-  Reminders.actions.clear();
-  sendTextMessage(recipientId, msg);
 }
