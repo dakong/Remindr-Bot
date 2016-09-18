@@ -1,4 +1,6 @@
 var Reminders = require('../models/Reminders.js'),
+  CronJob = require('cron').CronJob,
+  moment = require('moment'),
   request = require('request'),
   config = require('config');
 
@@ -40,9 +42,33 @@ sendTextMessage = function (recipientId, messageText) {
   callSendAPI(messageData);
 };
 
-/*****************************************************************************
- ***************************** COMMAND LINE OPTIONS  *************************
- *****************************************************************************/
+/**
+ * Function that forms the message that the bot will send as a reminder to the user
+ */
+sendReminderMessage = function(recipientId, reminder){
+  console.log('BOT IS SENDING A REMINDER');
+  var messageData = {
+    recipient: {
+      id: recipientId
+    },
+    message: {
+      text: 'Hey I\'m reminding you to ' + reminder
+    }
+  };
+  callSendAPI(messageData);
+
+  //TODO clear the reminder from the database
+};
+
+
+
+getCurrentDate = function(time){
+  var d = moment(time, "HH:mm A");
+  return new Date(d.format());
+};
+
+
+
 
 /**
  * Sends a list of all the reminders for the user.
@@ -99,6 +125,9 @@ exports.commandLineAddReminder = function (reminder, time, recipientId) {
     console.log(returnMsg);
     if (returnMsg.success) {
       msg = 'I\'ll remind you to ' + reminder + ' at ' + time;
+      var date = getCurrentDate(time);
+      console.log('creating new job at: ' + date);
+      var job = new CronJob(date, function(){sendReminderMessage(recipientId, reminder)}, true, 'America/Los_Angeles');
       sendTextMessage(recipientId, msg);
     }
     else if (returnMsg.msg === 'duplicate') {
@@ -192,3 +221,4 @@ exports.sendDefault = function (recipientId) {
   };
   callSendAPI(messageData);
 };
+
