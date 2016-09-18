@@ -18,7 +18,7 @@ app.use(function(req,res,next){
 });
 
 //Reminders routes
-require('./app/routes')(app);
+require('./app/Routes')(app);
 
 mongoose.connect(DB_URL);
 app.listen(port);

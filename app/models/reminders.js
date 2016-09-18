@@ -58,18 +58,18 @@ module.exports.actions.createThroughBot = function (text, time, sendMessage) {
   });
 };
 
-module.exports.actions.edit = function(reminder, time, sendMessage){
+module.exports.actions.edit = function (reminder, time, sendMessage) {
   Reminder.findOneAndUpdate({
     "name": reminder
-  },{
+  }, {
     "time": time
-  }, function(err){
-    if(err){
+  }, function (err) {
+    if (err) {
       sendMessage({'success': false, 'msg': 'Error editing ' + reminder});
     }
-    else{
+    else {
       console.log('Reminder successfully edited');
-      sendMessage({'success':true});
+      sendMessage({'success': true});
     }
   });
   //Reminder.findOne({
@@ -163,6 +163,6 @@ module.exports.actions.update = function (req, res) {
   });
 };
 
-module.exports.actions.clear = function(){
+module.exports.actions.clear = function () {
   Reminder.collection.remove({});
 };
