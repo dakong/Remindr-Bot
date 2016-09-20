@@ -1,5 +1,5 @@
-ngrok
-config
+#ngrok
+#config
 node_modules
 *.log
 .idea
