@@ -1,4 +1,4 @@
-var Reminders = require('../models/Reminders.js'),
+var Reminders = require('../models/reminders.js'),
   CronJob = require('cron').CronJob,
   moment = require('moment'),
   request = require('request'),

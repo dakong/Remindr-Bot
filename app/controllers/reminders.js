@@ -1,4 +1,4 @@
-var Reminders = require('../models/Reminders.js'),
+var Reminders = require('../models/reminders.js'),
   messageActions = require('./MessageActions.js'),
   config = require('config');
 

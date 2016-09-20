@@ -1,5 +1,5 @@
-var Reminder = require('./models/Reminders.js');
-var ReminderBot = require('./controllers/Reminders.js');
+var Reminder = require('./models/reminders.js');
+var ReminderBot = require('./controllers/reminders.js');
 
 module.exports = function (app) {
 
