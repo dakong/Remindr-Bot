@@ -13,4 +13,4 @@ module.exports = function (app) {
   //Reminder Bot api
   app.get('/api', ReminderBot.validateToken);
   app.post('/api', ReminderBot.userSentMessage);
-}
+};

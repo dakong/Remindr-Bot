@@ -47,19 +47,18 @@ sendTextMessage = function (recipientId, messageText) {
  */
 sendReminderMessage = function(recipientId, reminder){
   console.log('BOT IS SENDING A REMINDER');
-  var messageData = {
-    recipient: {
-      id: recipientId
-    },
-    message: {
-      text: 'Hey I\'m reminding you to ' + reminder
-    }
-  };
-  callSendAPI(messageData);
-
-  //TODO clear the reminder from the database
+  Reminders.actions.deleteThroughBot(reminder, function () {
+    var messageData = {
+      recipient: {
+        id: recipientId
+      },
+      message: {
+        text: 'Hey I\'m reminding you to ' + reminder
+      }
+    };
+    callSendAPI(messageData);
+  });
 };
-
 
 
 getCurrentDate = function(time){

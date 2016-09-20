@@ -3,6 +3,9 @@ var Reminders = require('../models/Reminders.js'),
   config = require('config');
 
 const VALIDATION_TOKEN = config.get('validationToken');
+const REMIND_OPTIONS = {
+  "add": ["remind me to"]
+};
 
 module.exports = {};
 
@@ -29,7 +32,7 @@ module.exports.validateToken = function (req, res) {
  */
 module.exports.userSentMessage = function (req, res) {
   var data = req.body;
-
+  console.log('user sent message');
   // Make sure this is a page subscription
   if (data.object == 'page') {
     // Iterate over each entry
@@ -141,6 +144,15 @@ function receivedMessage(event) {
       }
     }
     else {
+      ////var containsAdd = messageText.substring(REMIND_OPTIONS.add[0]);
+      //var containsAddReminder= messageText.indexOf(REMIND_OPTIONS.add[0]);
+      //
+      //if(containsAddReminder){
+      //  //Get the index of the last character of the string we are matching.
+      //  reminder =  messageText.slice(containsAddReminder + REMIND_OPTIONS.add[0].length + 1);
+      //  console.log(reminder);
+      //
+      //}
       switch (messageText) {
         case 'list my reminders':
           messageActions.sendReminderList(senderId);
@@ -194,6 +206,6 @@ function receivedAuthentication(event) {
   // When an authentication is received, we'll send a message back to the sender
   // to let them know it was successful.
 
-  //comment for now
+  //comment for now`
   /*messageActions.sendTextMessage(senderID, "Authentication successful");*/
 }
