@@ -1,13 +1,16 @@
 var Reminders = require('../models/reminders.js'),
+  fs = require('fs'),
   CronJob = require('cron').CronJob,
   moment = require('moment'),
   request = require('request'),
-  config = require('config');
+  config = require('config'),
+  uuid = require('uuid');
 
 const PAGE_ACCESS_TOKEN = config.get('pageAccessToken');
 
 var exports = module.exports = {};
-
+//var cronHash = require('../cronJobs.js');
+var cronHash = {};
 
 callSendAPI = function (messageData) {
   request({
@@ -47,7 +50,8 @@ sendTextMessage = function (recipientId, messageText) {
  */
 sendReminderMessage = function(recipientId, reminder){
   console.log('BOT IS SENDING A REMINDER');
-  Reminders.actions.deleteThroughBot(reminder, function () {
+
+  Reminders.actions.delete(reminder, function () {
     var messageData = {
       recipient: {
         id: recipientId
@@ -65,16 +69,28 @@ getCurrentDate = function(time){
   var d = moment(time, "HH:mm A");
   return new Date(d.format());
 };
+exports.setInitialData = function(reminder){
+  console.log('creating cron jobs from the database');
+  reminder.forEach(function(element){
 
-
-
+    var cronDate = new Date(element.cronTime);
+    console.log('creating cron job at ' + cronDate);
+    cronHash[element.cronJobId] = new CronJob({
+      cronTime: cronDate,
+      onTick : function(){sendReminderMessage(element.recipientId, element.name)},
+      start : true,
+      timeZone : 'America/Los_Angeles'
+    });
+    console.log('populating cron hash: ',  cronHash);
+  });
+};
 
 /**
  * Sends a list of all the reminders for the user.
  * @param recipientId id of the user we want to send the list of reminder.
  */
 exports.sendReminderList = function (recipientId) {
-  Reminders.actions.getAllThroughBot(function (err, reminder) {
+  Reminders.actions.getAll(function (err, reminder) {
     var reminderList;
     if (err) {
       console.log(err)
@@ -104,7 +120,6 @@ exports.sendReminderList = function (recipientId) {
       callSendAPI(messageData);
     }
   });
-
 };
 
 /**
@@ -120,13 +135,27 @@ exports.commandLineAddReminder = function (reminder, time, recipientId) {
     return;
   }
 
-  Reminders.actions.createThroughBot(reminder, time, function (returnMsg) {
+  //Automatically set our cron date to today's date at the specified time.
+  var cronDate = getCurrentDate(time);
+
+  Reminders.actions.create(reminder, time, cronDate, recipientId, function (returnMsg) {
     console.log(returnMsg);
     if (returnMsg.success) {
+
+      console.log('creating new cron job at: ' + cronDate);
+
       msg = 'I\'ll remind you to ' + reminder + ' at ' + time;
-      var date = getCurrentDate(time);
-      console.log('creating new job at: ' + date);
-      var job = new CronJob(date, function(){sendReminderMessage(recipientId, reminder)}, true, 'America/Los_Angeles');
+      var cronId = uuid.v4();
+
+      //create our cron job
+      cronHash[cronId] = new CronJob({
+        cronTime: cronDate,
+        onTick : function(){sendReminderMessage(recipientId, reminder)},
+        start : true,
+        timeZone : 'America/Los_Angeles'
+      });
+
+      Reminders.actions.addCronJob(reminder, time, cronId);
       sendTextMessage(recipientId, msg);
     }
     else if (returnMsg.msg === 'duplicate') {
@@ -166,7 +195,11 @@ exports.commandLineUpdateReminder = function (reminder, time, recipientId) {
  * @param recipientId the id of the user we want to delete the reminder from.
  */
 exports.commandLineDeleteReminder = function (reminder, recipientId) {
-  Reminders.actions.deleteThroughBot(reminder, function () {
+  Reminders.actions.delete(reminder, function (cronJobId) {
+    //Stop our cronJob in our hash
+    console.log(cronJobId);
+    cronHash[cronJobId].stop();
+
     var messageData = {
       recipient: {
         id: recipientId
@@ -201,7 +234,17 @@ exports.commandLineHelpOptions = function (recipientId) {
  */
 exports.commandLineClear = function (recipientId) {
   var msg = "Reminder List has been cleared";
-  Reminders.actions.clear();
+
+  for(var jobId in cronHash){
+    if(cronHash.hasOwnProperty(jobId)){
+      cronHash[jobId].stop();
+      console.log('Stopping cron job: ' + jobId);
+    }
+  }
+  Reminders.actions.clear(function(cronJobId){
+    console.log("stopping cronJob: " + cronJobId);
+    cronHash[cronJobId].stop();
+  });
   sendTextMessage(recipientId, msg);
 };
 

@@ -4,8 +4,11 @@ var Reminders = require('../models/reminders.js'),
 
 const VALIDATION_TOKEN = config.get('validationToken');
 const REMIND_OPTIONS = {
-  "add": ["remind me to"]
+  "add": ["remind me to"],
+  "time": ["at"]
 };
+
+const MAX_TIME_LENGTH = 7;
 
 module.exports = {};
 
@@ -77,7 +80,7 @@ function receivedMessage(event) {
 
     //Handles the case when a user sends a message in command line format
     if (messageText.startsWith('reminder')) {
-
+      console.log('starts with reminder');
       //Splits our message into an array
       var messageArray = messageText.toLowerCase().match(/(?:[^\s"]+|"[^"]*")+/g);
 
@@ -144,22 +147,38 @@ function receivedMessage(event) {
       }
     }
     else {
-      ////var containsAdd = messageText.substring(REMIND_OPTIONS.add[0]);
-      //var containsAddReminder= messageText.indexOf(REMIND_OPTIONS.add[0]);
-      //
-      //if(containsAddReminder){
-      //  //Get the index of the last character of the string we are matching.
-      //  reminder =  messageText.slice(containsAddReminder + REMIND_OPTIONS.add[0].length + 1);
-      //  console.log(reminder);
-      //
-      //}
-      switch (messageText) {
-        case 'list my reminders':
-          messageActions.sendReminderList(senderId);
-          break;
-        default:
-          messageActions.sendDefault(senderId);
+      //var containsAdd = messageText.substring(REMIND_OPTIONS.add[0]);
+      console.log('readable reminder');
+      var containsAddReminder= messageText.indexOf(REMIND_OPTIONS.add[0]);
+      var containsTime = messageText.indexOf(REMIND_OPTIONS.time[0]);
+
+      if(containsAddReminder != -1 && containsTime != -1){
+
+        //Get the lower and upper index of the reminder and time sub string
+        var reminderIndexLowerBound = containsAddReminder + REMIND_OPTIONS.add[0].length + 1;
+        var reminderIndexUpperBound = containsTime - 1;
+        var timeIndexLowerBound = containsTime + REMIND_OPTIONS.time[0].length + 1;
+        var timeIndexUpperBound;
+
+        reminder =  messageText.slice(reminderIndexLowerBound, reminderIndexUpperBound);
+        //Checks to see if the user set a time to remind them. Currently it only checks for the 'at' character
+        var timeSubstring = messageText.slice(timeIndexLowerBound);
+
+        //Grab only the time within the substring.
+        timeSubstring = timeSubstring.slice(0, MAX_TIME_LENGTH);
+
+        //If the time is is of length 6 instead of 7, then we want to remove the last character.
+        timeSubstring[MAX_TIME_LENGTH-1] != 'm' ? time = timeSubstring.slice(0,MAX_TIME_LENGTH-1) : time = timeSubstring;
+        console.log(reminder, time);
+        messageActions.commandLineAddReminder(reminder, time, senderId);
       }
+      //switch (messageText) {
+      //  case 'list my reminders':
+      //    messageActions.sendReminderList(senderId);
+      //    break;
+      //  default:
+      //    messageActions.sendDefault(senderId);
+      //}
     }
   }
 }
