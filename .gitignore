@@ -1,5 +1,5 @@
-#ngrok
-#config
-#node_modules
-#*.log
+ngrok
+config
+node_modules
+*.log
 .idea
