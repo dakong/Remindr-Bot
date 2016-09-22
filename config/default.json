@@ -1,9 +1,0 @@
-{
-    "appSecret": "",
-    "pageAccessToken": "EAAKDIl8zrxEBANz4LjP4dgtrcO78bEtgqdVyKpK5xFZCEBfqK32amaEnHv1Az0ztYK9Sf1HFAb4TU2Ync1t4nJXJuVpPefnvZALnep9gWGubZALcwUCXPJUXtsimZBvFwoiKp3eZBZCDnOCywLZA09lWJC8AgI9dbInKG3KZAZC2NPwZDZD",
-    "validationToken": "VERIFY_TOKEN",
-    "serverURL": "",
-    "dbUserName":"daniel",
-    "dbPassword":"password",
-    "dbURL" : "mongodb://daniel:password@ds019076.mlab.com:19076/reminders"
-}
