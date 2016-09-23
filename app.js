@@ -11,6 +11,11 @@ const
 const port = process.env.PORT || 8080,
   DB_URL = config.get('dbURL');
 
+setInterval(function(){
+  console.log('Waking up Heroku App');
+  https.get('https://reminder.herokuapp.com');
+},600000);
+
 
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
