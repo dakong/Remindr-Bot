@@ -66,7 +66,7 @@ sendReminderMessage = function(recipientId, reminder){
 
 
 getCurrentDate = function(time){
-  var d = moment(time, "HH:mm A");
+  var d = new Date(moment(time, "HH:mm A").tz("America/Los_Angeles").format());
   return new Date(d.format());
 };
 exports.setInitialData = function(reminder){
@@ -136,8 +136,8 @@ exports.commandLineAddReminder = function (reminder, time, recipientId) {
   }
 
   //Automatically set our cron date to today's date at the specified time.
-  var cronDate = getCurrentDate(time);
-
+  //var cronDate = getCurrentDate(time);
+  var cronDate = new Date(moment(time, "HH:mm A").tz("America/Los_Angeles").format());
   Reminders.actions.create(reminder, time, cronDate, recipientId, function (returnMsg) {
     console.log(returnMsg);
     if (returnMsg.success) {
