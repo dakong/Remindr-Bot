@@ -137,7 +137,7 @@ exports.commandLineAddReminder = function (reminder, time, recipientId) {
 
   //Automatically set our cron date to today's date at the specified time.
   //var cronDate = getCurrentDate(time);
-  var momentDate = moment(time, "HH:mm A").add(7,'hour').format();
+  var momentDate = moment(time, "HH:mm A").subtract(7,'hour').format();
   console.log('moment date: ', momentDate);
   var cronDate = new Date(momentDate);
   console.log('cron date: ', cronDate);
