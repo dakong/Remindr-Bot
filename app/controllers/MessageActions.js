@@ -140,9 +140,9 @@ exports.commandLineAddReminder = function (reminder, time, recipientId) {
   //var momentDate = moment(time, "HH:mm A").add(7,'hour').format();
   console.log('current utc time', new Date());
   console.log('time: ', time);
-  var momentTime = moment(time,"HH:mm A");
+  var momentTime = moment(time,"HH:mm A").format();
   console.log('moment time ', momentTime);
-  var momentDate = moment(time, "HH:mm A").subtract(7,'hour').format();
+  var momentDate = moment(time, "HH:mm A").add(7,'hour');
   console.log('moment date: ', momentDate);
   var cronDate = new Date(momentDate);
   console.log('cron date: ', cronDate);
