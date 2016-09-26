@@ -8,6 +8,11 @@ const REMIND_OPTIONS = {
   "time": ["at"]
 };
 
+//this is with the string 'at'
+const REGEX_TIME_AT = /at\s(?:[0-9]|0[0-9]|1[0-9]|2[0-3])?:[0-5][0-9](?:am|pm)??$/i;
+const REGEX_TIME = /(?:[0-9]|0[0-9]|1[0-9]|2[0-3])?:[0-5][0-9](?:am|pm)??$/i;
+const REGEX_AM_PM = /(?:am|pm)??/i;
+
 const MAX_TIME_LENGTH = 7;
 
 module.exports = {};
@@ -147,29 +152,25 @@ function receivedMessage(event) {
       }
     }
     else {
-      //var containsAdd = messageText.substring(REMIND_OPTIONS.add[0]);
       console.log('readable reminder');
       var containsAddReminder= messageText.indexOf(REMIND_OPTIONS.add[0]);
-      var containsTime = messageText.indexOf(REMIND_OPTIONS.time[0]);
+      var containsTime = REGEX_TIME.test(messageText);
 
-      if(containsAddReminder != -1 && containsTime != -1){
+      if(containsAddReminder != -1 && containsTime){
+        time = REGEX_TIME.exec(messageText)[0];
+        //If user doesn't supply am or pm then we want to grab the time that is next
+        if(!REGEX_AM_PM.test(messageText)){
+
+        }
 
         //Get the lower and upper index of the reminder and time sub string
         var reminderIndexLowerBound = containsAddReminder + REMIND_OPTIONS.add[0].length + 1;
-        var reminderIndexUpperBound = containsTime - 1;
-        var timeIndexLowerBound = containsTime + REMIND_OPTIONS.time[0].length + 1;
-        var timeIndexUpperBound;
+        var reminderIndexUpperBound = messageText.search(REGEX_TIME_AT) - 1;
 
         reminder =  messageText.slice(reminderIndexLowerBound, reminderIndexUpperBound);
-        //Checks to see if the user set a time to remind them. Currently it only checks for the 'at' character
-        var timeSubstring = messageText.slice(timeIndexLowerBound);
 
-        //Grab only the time within the substring.
-        timeSubstring = timeSubstring.slice(0, MAX_TIME_LENGTH);
-
-        //If the time is is of length 6 instead of 7, then we want to remove the last character.
-        timeSubstring[MAX_TIME_LENGTH-1] != 'm' ? time = timeSubstring.slice(0,MAX_TIME_LENGTH-1) : time = timeSubstring;
-        console.log(reminder, time);
+        console.log('reminder ', reminder);
+        console.log('time', time);
         messageActions.commandLineAddReminder(reminder, time, senderId);
       }
       //switch (messageText) {
