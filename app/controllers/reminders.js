@@ -7,7 +7,8 @@ const REMIND_OPTIONS = {
   "add": ["remind me to"],
   "time": ["at"],
   "clear":["clear my reminder"],
-  "list":["list my reminder"]
+  "list":["list my reminder"],
+  "thanks":["thank","ty","thx"]
 };
 
 //this is with the string 'at'
@@ -159,6 +160,14 @@ function receivedMessage(event) {
       var containsTime = REGEX_TIME.test(messageText);
       var containsClearReminder = messageText.indexOf(REMIND_OPTIONS.clear[0]);
       var containsListReminder = messageText.indexOf(REMIND_OPTIONS.list[0]);
+      var containsThanks;
+
+      for(var i = 0, len = REMIND_OPTIONS.thanks.length; i < len; i++){
+        containsThanks = messageText.indexOf(REMIND_OPTIONS.list[i]);
+        if(containsThanks != -1){
+          break;
+        }
+      }
 
       if(containsAddReminder != -1 && containsTime){
         time = REGEX_TIME.exec(messageText)[0];
@@ -182,6 +191,9 @@ function receivedMessage(event) {
       }
       else if(containsListReminder != -1){
         messageActions.sendReminderList(senderId);
+      }
+      else if(containsThanks){
+        messageActions.respondToThanks(senderId);
       }
       //switch (messageText) {
       //  case 'list my reminders':

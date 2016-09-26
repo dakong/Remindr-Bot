@@ -258,6 +258,18 @@ exports.commandLineClear = function (recipientId) {
   sendTextMessage(recipientId, msg);
 };
 
+exports.respondToThanks = function(recipientId) {
+  var messageData = {
+    recipient: {
+      id: recipientId
+    },
+    message: {
+      text: "No problem bud"
+    }
+  };
+  callSendAPI(messageData);
+};
+
 /**
  * Default message to send when there is an unrecognized command
  * @param recipientId id of the user we want to send the message to
@@ -273,4 +285,5 @@ exports.sendDefault = function (recipientId) {
   };
   callSendAPI(messageData);
 };
+
 
