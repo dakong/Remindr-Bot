@@ -16,8 +16,6 @@ const REGEX_TIME_AT = /at\s(?:[0-9]|0[0-9]|1[0-9]|2[0-3])?:[0-5][0-9](?:am|pm)??
 const REGEX_TIME = /(?:[0-9]|0[0-9]|1[0-9]|2[0-3])?:[0-5][0-9](?:am|pm)??$/i;
 const REGEX_AM_PM = /(?:am|pm)??/i;
 
-const MAX_TIME_LENGTH = 7;
-
 module.exports = {};
 
 /**
