@@ -6,7 +6,8 @@ const VALIDATION_TOKEN = config.get('validationToken');
 const REMIND_OPTIONS = {
   "add": ["remind me to"],
   "time": ["at"],
-  "clear":["clear my reminders"]
+  "clear":["clear my reminder"],
+  "list":["list my reminder"]
 };
 
 //this is with the string 'at'
@@ -157,6 +158,7 @@ function receivedMessage(event) {
       var containsAddReminder= messageText.indexOf(REMIND_OPTIONS.add[0]);
       var containsTime = REGEX_TIME.test(messageText);
       var containsClearReminder = messageText.indexOf(REMIND_OPTIONS.clear[0]);
+      var containsListReminder = messageText.indexOf(REMIND_OPTIONS.list[0]);
 
       if(containsAddReminder != -1 && containsTime){
         time = REGEX_TIME.exec(messageText)[0];
@@ -177,6 +179,9 @@ function receivedMessage(event) {
       }
       else if(containsClearReminder != -1){
         messageActions.commandLineClear(senderId);
+      }
+      else if(containsListReminder != -1){
+        messageActions.sendReminderList(senderId);
       }
       //switch (messageText) {
       //  case 'list my reminders':
