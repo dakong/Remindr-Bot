@@ -64,18 +64,6 @@ sendReminderMessage = function(recipientId, reminder){
   });
 };
 
-
-getCurrentDate = function(time){
-  var d = new Date(moment(time, "HH:mm A").tz("America/Los_Angeles").format());
-  return new Date(d.format());
-};
-
-getHourAndMinutes = function(time){
-  var timeColon = time.indexOf(':');
-  var hour = time.slice(0,timeColon);
-  var minute = time.slice(timeColon+1, time.length-2);
-  console.log('hour', hour, 'minute', minute);
-};
 exports.setInitialData = function(reminder){
   console.log('creating cron jobs from the database');
   reminder.forEach(function(element){
@@ -141,24 +129,22 @@ exports.commandLineAddReminder = function (reminder, time, recipientId) {
     //handle case
     return;
   }
+  // console.log('current utc time', new Date().getUTCDate());
+  // console.log('time: ', time);
+  // var currentDateTime = new Date();
+  // var momentTime = moment.tz(currentDateTime,"America/Los_Angeles").format();
+  // console.log('moment time ', momentTime);
 
-  //Automatically set our cron date to today's date at the specified time.
-  //var cronDate = getCurrentDate(time);
-  //var momentDate = moment(time, "HH:mm A").add(7,'hour').format();
-  console.log('current utc time', new Date().getUTCDate());
-  console.log('time: ', time);
-  var currentDateTime = new Date();
-  var momentTime = moment.tz(currentDateTime,"America/Los_Angeles").format();
-  console.log('moment time ', momentTime);
   var formattedTime = moment(time, ["h:mm A"]);
   var formattedHour = formattedTime.format('HH');
   var formattedMinute = formattedTime.format('mm');
   var momentDate = moment.tz("America/Los_Angeles");
-  console.log('moment date before adding hours and minutes', momentDate.format());
+
   momentDate.hour(formattedHour);
   momentDate.minute(formattedMinute);
+
   console.log('moment date: ', momentDate.format());
-  getHourAndMinutes(time);
+
   var cronDate = new Date(momentDate.format());
   console.log('cron date: ', cronDate);
 
