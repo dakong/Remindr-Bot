@@ -150,8 +150,12 @@ exports.commandLineAddReminder = function (reminder, time, recipientId) {
   var currentDateTime = new Date();
   var momentTime = moment.tz(currentDateTime,"America/Los_Angeles").format();
   console.log('moment time ', momentTime);
-
-  var momentDate = moment(time, "HH:mm A").tz("America/Los_Angeles").format();
+  var formattedTime = moment(time, ["h:mm A"]);
+  var formattedHour = formattedTime.format('HH');
+  var formattedMinute = formattedTime.format('mm');
+  var momentDate = moment.tz("America/Los_Angeles").format();
+  momentDate.hours(formattedHour);
+  momentDate.minutes(formattedMinute);
   console.log('moment date: ', momentDate);
   getHourAndMinutes(time);
   var cronDate = new Date(momentDate);
