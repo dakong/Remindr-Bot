@@ -155,8 +155,8 @@ exports.commandLineAddReminder = function (reminder, time, recipientId) {
   var formattedMinute = formattedTime.format('mm');
   var momentDate = moment.tz("America/Los_Angeles").format();
   console.log('moment date before adding hours and minutes', momentDate);
-  momentDate.hours(formattedHour);
-  momentDate.minutes(formattedMinute);
+  momentDate.hour(formattedHour);
+  momentDate.minute(formattedMinute);
   console.log('moment date: ', momentDate);
   getHourAndMinutes(time);
   var cronDate = new Date(momentDate);
