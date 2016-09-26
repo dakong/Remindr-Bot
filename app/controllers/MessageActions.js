@@ -69,6 +69,13 @@ getCurrentDate = function(time){
   var d = new Date(moment(time, "HH:mm A").tz("America/Los_Angeles").format());
   return new Date(d.format());
 };
+
+getHourAndMinutes = function(time){
+  var timeColon = time.indexOf(':');
+  var hour = time.slice(0,timeIndex);
+  var minute = time.slice(timeIndex, time.length);
+  console.log('hour', hour, 'minute', minute);
+};
 exports.setInitialData = function(reminder){
   console.log('creating cron jobs from the database');
   reminder.forEach(function(element){
@@ -141,10 +148,9 @@ exports.commandLineAddReminder = function (reminder, time, recipientId) {
   console.log('current utc time', new Date().getUTCDate());
   console.log('time: ', time);
   //var momentTime = moment(time,"HH:mm A").utc().add(7,'hour').format();
-
-  var momentTime = moment.utc(time, "HH:mm A").format();
+  var momentTime = moment().zone("-08:00");
   console.log('moment time ', momentTime);
-  var momentDate = moment.utc(time, "HH:mm A").add(7,'hour').format();
+  var momentDate = moment(time, "HH:mm A").format();
   console.log('moment date: ', momentDate);
   var cronDate = new Date(momentDate);
   console.log('cron date: ', cronDate);
