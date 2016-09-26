@@ -153,13 +153,13 @@ exports.commandLineAddReminder = function (reminder, time, recipientId) {
   var formattedTime = moment(time, ["h:mm A"]);
   var formattedHour = formattedTime.format('HH');
   var formattedMinute = formattedTime.format('mm');
-  var momentDate = moment.tz("America/Los_Angeles").format();
-  console.log('moment date before adding hours and minutes', momentDate);
+  var momentDate = moment.tz("America/Los_Angeles");
+  console.log('moment date before adding hours and minutes', momentDate.format());
   momentDate.hour(formattedHour);
   momentDate.minute(formattedMinute);
-  console.log('moment date: ', momentDate);
+  console.log('moment date: ', momentDate.format());
   getHourAndMinutes(time);
-  var cronDate = new Date(momentDate);
+  var cronDate = new Date(momentDate.format());
   console.log('cron date: ', cronDate);
 
   Reminders.actions.create(reminder, time, cronDate, recipientId, function (returnMsg) {
