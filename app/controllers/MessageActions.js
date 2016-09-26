@@ -154,6 +154,7 @@ exports.commandLineAddReminder = function (reminder, time, recipientId) {
   var formattedHour = formattedTime.format('HH');
   var formattedMinute = formattedTime.format('mm');
   var momentDate = moment.tz("America/Los_Angeles").format();
+  console.log('moment date before adding hours and minutes', momentDate);
   momentDate.hours(formattedHour);
   momentDate.minutes(formattedMinute);
   console.log('moment date: ', momentDate);
