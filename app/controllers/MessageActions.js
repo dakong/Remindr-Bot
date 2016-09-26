@@ -1,7 +1,7 @@
 var Reminders = require('../models/reminders.js'),
   fs = require('fs'),
   CronJob = require('cron').CronJob,
-  moment = require('moment'),
+  moment = require('moment-timezone'),
   request = require('request'),
   config = require('config'),
   uuid = require('uuid');
@@ -72,8 +72,8 @@ getCurrentDate = function(time){
 
 getHourAndMinutes = function(time){
   var timeColon = time.indexOf(':');
-  var hour = time.slice(0,timeIndex);
-  var minute = time.slice(timeIndex, time.length);
+  var hour = time.slice(0,timeColon);
+  var minute = time.slice(timeColon+1, time.length-2);
   console.log('hour', hour, 'minute', minute);
 };
 exports.setInitialData = function(reminder){
@@ -147,11 +147,13 @@ exports.commandLineAddReminder = function (reminder, time, recipientId) {
   //var momentDate = moment(time, "HH:mm A").add(7,'hour').format();
   console.log('current utc time', new Date().getUTCDate());
   console.log('time: ', time);
-  //var momentTime = moment(time,"HH:mm A").utc().add(7,'hour').format();
-  var momentTime = moment().zone("-08:00");
+  var currentDateTime = new Date();
+  var momentTime = moment.tz(currentDateTime,"America/Los_Angeles").format();
   console.log('moment time ', momentTime);
-  var momentDate = moment(time, "HH:mm A").format();
+
+  var momentDate = moment(time, "HH:mm A").tz("America/Los_Angeles").format();
   console.log('moment date: ', momentDate);
+  getHourAndMinutes(time);
   var cronDate = new Date(momentDate);
   console.log('cron date: ', cronDate);
 
