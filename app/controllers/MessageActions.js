@@ -107,28 +107,45 @@ exports.sendReminderList = function (recipientId) {
       });
 
       if (reminderNames.length) {
-        reminderList = "Here are your current reminders: \n" +
-          reminderNames.reduce(function (previousValue, currentValue, currentIndex, array) {
+        //reminderList = "Here are your current reminders: \n" +
+          reminderList = reminderNames.reduce(function (previousValue, currentValue, currentIndex, array) {
             return previousValue + '\n' + currentValue;
           });
       } else {
         reminderList = "You have no reminders set!";
       }
-
-      console.log(reminderList);
-      var messageData = {
-        recipient: {
-          id: recipientId
-        },
-        message: {
-          text: reminderList
-        }
-      };
-      callSendAPI(messageData);
+      console.log('my reminder list: ', reminderList);
+      return reminderList;
     }
   });
 };
 
+
+exports.addReminder = function(reminder, time, date, recipientId){
+
+  Reminders.actions.create(reminder, time, date, recipientId, function (returnMsg) {
+    console.log(returnMsg);
+    if (returnMsg.success) {
+      console.log('creating new cron job at: ' + date);
+      msg = 'I\'ll remind you to ' + reminder + ' at ' + time;
+      var cronId = uuid.v4();
+
+      //create our cron job
+      cronHash[cronId] = new CronJob({
+        cronTime: new Date(date),
+        onTick : function(){sendReminderMessage(recipientId, reminder)},
+        start : true,
+        timeZone : 'America/Los_Angeles'
+      });
+      Reminders.actions.addCronJob(reminder, time, cronId);
+      //sendTextMessage(recipientId, msg);
+    }
+    else if (returnMsg.msg === 'duplicate') {
+      //msg = 'That reminder already exists!';
+      //sendTextMessage(recipientId, msg);
+    }
+  });
+};
 /**
  * This function will create the reminder and add it to the database.
  * @param reminder The task we want to remind the user
@@ -263,6 +280,20 @@ exports.commandLineClear = function (recipientId) {
     cronHash[cronJobId].stop();
   });
   sendTextMessage(recipientId, msg);
+};
+
+exports.clearReminders = function (recipientId){
+  for(var jobId in cronHash){
+    if(cronHash.hasOwnProperty(jobId)){
+      cronHash[jobId].stop();
+      console.log('Stopping cron job: ' + jobId);
+    }
+  }
+  Reminders.actions.clear(function(cronJobId){
+    console.log("stopping cronJob: " + cronJobId);
+    cronHash[cronJobId].stop();
+  });
+
 };
 
 /**
