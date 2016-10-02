@@ -7,7 +7,10 @@ const VALIDATION_TOKEN = config.get('validationToken');
 const FB_PAGE_TOKEN = config.get('pageAccessToken');
 const REMIND_OPTIONS = {
   "add": ["remind me to"],
-  "time": ["at"]
+  "time": ["at"],
+  "clear":["clear my reminder"],
+  "list":["list my reminder"],
+  "thanks":["thank","ty","thx"]
 };
 var moment = require('moment');
 const DEBUG = 1;
@@ -230,7 +233,6 @@ const wit = new Wit({
  */
 module.exports.userSentMessage = function (req, res) {
   var data = req.body;
-
   console.log('user sent message');
   // Make sure this is a page subscription
   if (data.object == 'page') {
@@ -374,6 +376,16 @@ function receivedMessage(event) {
       console.log('readable reminder');
       var containsAddReminder= messageText.indexOf(REMIND_OPTIONS.add[0]);
       var containsTime = REGEX_TIME.test(messageText);
+      var containsClearReminder = messageText.indexOf(REMIND_OPTIONS.clear[0]);
+      var containsListReminder = messageText.indexOf(REMIND_OPTIONS.list[0]);
+      var containsThanks;
+
+      for(var i = 0, len = REMIND_OPTIONS.thanks.length; i < len; i++){
+        containsThanks = messageText.indexOf(REMIND_OPTIONS.list[i]);
+        if(containsThanks != -1){
+          break;
+        }
+      }
 
       if(containsAddReminder != -1 && containsTime){
         time = REGEX_TIME.exec(messageText)[0];
@@ -391,6 +403,15 @@ function receivedMessage(event) {
         console.log('reminder ', reminder);
         console.log('time', time);
         messageActions.commandLineAddReminder(reminder, time, senderId);
+      }
+      else if(containsClearReminder != -1){
+        messageActions.commandLineClear(senderId);
+      }
+      else if(containsListReminder != -1){
+        messageActions.sendReminderList(senderId);
+      }
+      else if(containsThanks){
+        messageActions.respondToThanks(senderId);
       }
       //switch (messageText) {
       //  case 'list my reminders':

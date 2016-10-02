@@ -64,18 +64,6 @@ sendReminderMessage = function(recipientId, reminder){
   });
 };
 
-
-getCurrentDate = function(time){
-  var d = new Date(moment(time, "HH:mm A").tz("America/Los_Angeles").format());
-  return new Date(d.format());
-};
-
-getHourAndMinutes = function(time){
-  var timeColon = time.indexOf(':');
-  var hour = time.slice(0,timeIndex);
-  var minute = time.slice(timeIndex, time.length);
-  console.log('hour', hour, 'minute', minute);
-};
 exports.setInitialData = function(reminder){
   console.log('creating cron jobs from the database');
   reminder.forEach(function(element){
@@ -107,8 +95,8 @@ exports.sendReminderList = function (recipientId) {
       });
 
       if (reminderNames.length) {
-        //reminderList = "Here are your current reminders: \n" +
-          reminderList = reminderNames.reduce(function (previousValue, currentValue, currentIndex, array) {
+        reminderList = "Here are your current reminders: \n" +
+          reminderNames.reduce(function (previousValue, currentValue, currentIndex, array) {
             return previousValue + '\n' + currentValue;
           });
       } else {
@@ -280,6 +268,18 @@ exports.commandLineClear = function (recipientId) {
     cronHash[cronJobId].stop();
   });
   sendTextMessage(recipientId, msg);
+};
+
+exports.respondToThanks = function(recipientId) {
+  var messageData = {
+    recipient: {
+      id: recipientId
+    },
+    message: {
+      text: "No problem bud"
+    }
+  };
+  callSendAPI(messageData);
 };
 
 exports.clearReminders = function (recipientId){
