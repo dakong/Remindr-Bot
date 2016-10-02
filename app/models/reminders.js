@@ -90,13 +90,36 @@ module.exports.actions.edit = function (reminder, time, sendMessage) {
   });
 };
 
-module.exports.actions.getAll = function (callBack) {
-  Reminder.find(function (err, reminders) {
-    if (err) {
-      callBack(err, null);
-    } else {
-      callBack(null, reminders);
-    }
+// module.exports.actions.getAll = function (callBack) {
+//   Reminder.find(function (err, reminders) {
+//     if (err) {
+//       callBack(err, null);
+//     } else {
+//       callBack(null, reminders);
+//     }
+//   });
+// };
+
+module.exports.actions.getAll = function () {
+  return new Promise(function(resolve,reject) {
+    var reminderList;
+    var promise = Reminder.find({}).exec();
+    promise.then(function (reminders) {
+      console.log('mongoose promises');
+      var reminderNames = reminders.map(function (el) {
+        return el.name + ' at ' + el.time;
+      });
+      if (reminderNames.length) {
+        reminderList = reminderNames.reduce(function (previousValue, currentValue, currentIndex, array) {
+          return previousValue + '\n' + currentValue;
+        });
+      }
+      else {
+        reminderList = '';
+      }
+      console.log(reminderList);
+      return resolve(reminderList);
+    });
   });
 };
 

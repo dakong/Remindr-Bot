@@ -85,32 +85,19 @@ exports.setInitialData = function(reminder){
  * @param recipientId id of the user we want to send the list of reminder.
  */
 exports.sendReminderList = function (recipientId) {
-  Reminders.actions.getAll(function (err, reminder) {
-    var reminderList;
-    if (err) {
-      console.log(err)
-    } else {
-      var reminderNames = reminder.map(function (el) {
-        return el.name + ' at ' + el.time;
-      });
-
-      if (reminderNames.length) {
-        reminderList = "Here are your current reminders: \n" +
-          reminderNames.reduce(function (previousValue, currentValue, currentIndex, array) {
-            return previousValue + '\n' + currentValue;
-          });
-      } else {
-        reminderList = "You have no reminders set!";
-      }
-      console.log('my reminder list: ', reminderList);
-      return reminderList;
-    }
+  return new Promise(function(resolve, reject){
+    var promise = new Promise(function(resolve,reject){
+      resolve(Reminders.actions.getAll());
+    });
+    promise.then(function(result){
+      console.log('getting all reminders: ' + result);
+      return resolve('\n' + result);
+    });
   });
 };
 
 
 exports.addReminder = function(reminder, time, date, recipientId){
-
   Reminders.actions.create(reminder, time, date, recipientId, function (returnMsg) {
     console.log(returnMsg);
     if (returnMsg.success) {

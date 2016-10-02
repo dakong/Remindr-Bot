@@ -15,9 +15,6 @@ const REMIND_OPTIONS = {
 var moment = require('moment');
 const DEBUG = 1;
 //this is with the string 'at'
-const REGEX_TIME_AT = /at\s(?:[0-9]|0[0-9]|1[0-9]|2[0-3])?:[0-5][0-9](?:am|pm)??$/i;
-const REGEX_TIME = /(?:[0-9]|0[0-9]|1[0-9]|2[0-3])?:[0-5][0-9](?:am|pm)??$/i;
-const REGEX_AM_PM = /(?:am|pm)??/i;
 
 function printWitLogs(sessionId, recipientId, text, context, entities){
   "use strict";
@@ -144,23 +141,6 @@ const actions = {
       return resolve(context);
     });
   },
-  clearReminders({context,sessionId,text,entities}){
-    console.log('=====clearing reminders=====');
-
-    const recipientId = sessions[sessionId].fbid;
-    if(DEBUG) printWitLogs(sessionId,text,recipientId, context, entities);
-
-    return new Promise(function(resolve, reject) {
-      var option = entities.yes_no[0].value;
-      if (option == 'yes') {
-        console.log('reminders were cleared');
-        messageActions.clearReminders(recipientId);
-        delete context.clear;
-        delete context.list;
-      }
-      return resolve(context);
-    });
-  },
   clearOrListReminders({context,sessionId,text,entities}){
     console.log('=====clear or list reminders=====');
 
@@ -185,37 +165,76 @@ const actions = {
       return resolve(context);
     })
   },
+  clearReminders({context,sessionId,text,entities}){
+    console.log('=====clearing reminders=====');
+
+    const recipientId = sessions[sessionId].fbid;
+    if(DEBUG) printWitLogs(sessionId,text,recipientId, context, entities);
+
+    return new Promise(function(resolve, reject) {
+      var option = entities.yes_no[0].value;
+      if (option == 'yes') {
+        console.log('reminders were cleared');
+        messageActions.clearReminders(recipientId);
+        delete context.clear;
+        delete context.list;
+      }
+      return resolve(context);
+    });
+  },
   listReminders({context,sessionId,text,entities}){
     console.log('=====list reminders=====');
 
     const recipientId = sessions[sessionId].fbid;
     if(DEBUG) printWitLogs(sessionId,text,recipientId, context, entities);
+    delete context.clear;
+    delete context.list;
 
-   new Promise(function(resolve, reject){
-      resolve(messageActions.sendReminderList(recipientId));
-    }).then(function(result){
-     console.log('result from promise ' + result);
-     return new Promise(function(resolve,reject){
-       context.listOfReminders = result;
-       delete context.list;
-       delete context.clear;
-       return resolve(context)
-     });
-   });
-
-    //return new Promise(function(resolve, reject) {
-    //  //context.listOfReminders = messageActions.sendReminderList(recipientId);
-    //  //messageActions.clearReminders(recipientId);
-    //  delete context.list;
-    //  delete context.clear;
-    //  return resolve(context)
-    //});
+    return new Promise(function(resolve,reject){
+      var promise = new Promise(function(resolve,reject){
+        resolve(messageActions.sendReminderList(recipientId));
+      });
+      promise.then(function(result){
+        context.listOfReminders = result;
+        console.log('result in inner promise: ' + result);
+        return resolve(context);
+      });
+    });
   },
   deleteReminder(){
 
   },
   editReminder(){
 
+  },
+  generateThankYou({context,sessionId,text}){
+    console.log('=====generating thank you=====');
+    const recipientId = sessions[sessionId].fbid;
+
+    return new Promise(function(resolve,reject) {
+      var randomOption = Math.floor((Math.random() * 3) + 1);
+
+      console.log(randomOption);
+      switch (randomOption) {
+        case 1:
+          context.responseOne = true;
+          delete context.responseTwo;
+          delete context.responseThree;
+          break;
+        case 2:
+          context.responseTwo = true;
+          delete context.responseOne;
+          delete context.responseThree;
+          break;
+        case 3:
+          context.responseThree = true;
+          delete context.responseTwo;
+          delete context.responseOne;
+          break;
+      }
+
+      return resolve(context);
+    });
   }
 };
 
@@ -413,13 +432,6 @@ function receivedMessage(event) {
       else if(containsThanks){
         messageActions.respondToThanks(senderId);
       }
-      //switch (messageText) {
-      //  case 'list my reminders':
-      //    messageActions.sendReminderList(senderId);
-      //    break;
-      //  default:
-      //    messageActions.sendDefault(senderId);
-      //}
     }
   }
 }
