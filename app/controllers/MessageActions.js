@@ -279,7 +279,7 @@ exports.clearReminders = function (recipientId){
   Reminders.actions.clear(function(cronJobId){
     console.log("stopping cronJob: " + cronJobId);
     cronHash[cronJobId].stop();
-  });
+  }, recipientId);
 
 };
 

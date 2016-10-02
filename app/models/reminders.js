@@ -1,7 +1,8 @@
 var mongoose = require('mongoose'),
   Schema = mongoose.Schema,
   moment = require('moment'),
-  uuid = require('uuid');
+  uuid = require('uuid'),
+  ReminderCount = require('./userReminderCount.js');
 /**
  * Schema for our Reminders
  */
@@ -10,7 +11,8 @@ var ReminderSchema = new Schema({
   time: String,
   cronJobId: String,
   cronTime: Date,
-  recipientId: String
+  recipientId: String,
+  reminderCount: Number
 });
 
 var Reminder = mongoose.model("Reminders", ReminderSchema);
@@ -28,32 +30,32 @@ module.exports.actions.create = function (text, time, date, recipientId, sendMes
   Reminder.findOne({
     "name": text,
     "time": time
-  }, function (err, reminders) {
-    if (err) {
-      sendMessage({'success': false, 'msg': 'Error adding ' + text});
-    }
-    else {
-      if (reminders === null) {
+  }).exec().then(function(reminders){
+    if (reminders === null) {
+      var reminder = new Reminder();
+      reminder.cronTime = date;
+      reminder.name = text;
+      reminder.time = time;
+      reminder.recipientId = recipientId;
 
-        var reminder = new Reminder();
-        reminder.cronTime = date;
-        reminder.name = text;
-        reminder.time = time;
-        reminder.recipientId = recipientId;
-
+      new Promise(function(resolve,reject){
+        resolve(ReminderCount.actions.getCount(recipientId));
+      }).then(function (reminderCount) {
+        reminder.reminderCount = reminderCount + 1;
         reminder.save(function (err) {
           if (err) {
             sendMessage({'success': false, 'msg': 'Error saving reminder ' + text});
           }
           else {
             console.log('Reminder successfully created');
+            ReminderCount.actions.incrementCount(recipientId);
             sendMessage({'success': true});
           }
         });
-      }
-      else {
-        sendMessage({'success': false, 'msg': 'Reminder already exists'})
-      }
+      });
+    }
+    else {
+      sendMessage({'success': false, 'msg': 'Reminder already exists'})
     }
   });
 };
@@ -107,7 +109,7 @@ module.exports.actions.getAll = function () {
     promise.then(function (reminders) {
       console.log('mongoose promises');
       var reminderNames = reminders.map(function (el) {
-        return el.name + ' at ' + el.time;
+        return el.reminderCount + ') ' + el.name + ' at ' + el.time;
       });
       if (reminderNames.length) {
         reminderList = reminderNames.reduce(function (previousValue, currentValue, currentIndex, array) {
@@ -172,7 +174,7 @@ module.exports.actions.update = function (req, res) {
   });
 };
 
-module.exports.actions.clear = function (stopCronJobs) {
+module.exports.actions.clear = function (stopCronJobs, recipientId) {
   console.log('clearing db');
   Reminder.find({},function(err, reminder){
     if(err){
@@ -182,8 +184,7 @@ module.exports.actions.clear = function (stopCronJobs) {
         stopCronJobs(element.cronJobId);
       });
     }
-
   });
-
   Reminder.collection.remove({});
+  ReminderCount.actions.clearCount(recipientId);
 };

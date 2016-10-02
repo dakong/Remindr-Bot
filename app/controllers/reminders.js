@@ -1,21 +1,20 @@
-var Reminders = require('../models/reminders.js'),
+const Reminders = require('../models/reminders.js'),
   messageActions = require('./MessageActions.js'),
   config = require('config'),
-  {Wit,log} = require('node-wit');
+  {Wit,log} = require('node-wit'),
+  moment = require('moment');
+
+/** Get our tokens **/
 const WIT_TOKEN = config.get('witToken');
 const VALIDATION_TOKEN = config.get('validationToken');
 const FB_PAGE_TOKEN = config.get('pageAccessToken');
-const REMIND_OPTIONS = {
-  "add": ["remind me to"],
-  "time": ["at"],
-  "clear":["clear my reminder"],
-  "list":["list my reminder"],
-  "thanks":["thank","ty","thx"]
-};
-var moment = require('moment');
-const DEBUG = 1;
-//this is with the string 'at'
 
+const DEBUG = 1;
+
+// ----------------------------------------------------------------------------
+// Debug Function
+
+// Print out information about a wit ai actions
 function printWitLogs(sessionId, recipientId, text, context, entities){
   "use strict";
   console.log(`Session ${sessionId} received ${text}`);
@@ -98,6 +97,7 @@ const fbMessage = (id, text) => {
         return json;
       });
 };
+
 //Our Bot Actions
 const actions = {
   send({sessionId}, {text}) {
@@ -305,136 +305,6 @@ module.exports.userSentMessage = function (req, res) {
     res.sendStatus(200);
   }
 };
-
-/**
- * Handles the case for when a user sends a text message to our application.
- * @param event
- */
-function receivedMessage(event) {
-  var senderId = event.sender.id;
-  var recipientId = event.recipient.id;
-  var timeOfMessage = event.timestamp;
-  var message = event.message;
-  var reminder;
-  var time;
-
-  console.log("Received message for user %d and page %d at %d with message: ", senderId, recipientId, timeOfMessage);
-  var messageText = message.text.toLowerCase();
-
-  if (messageText) {
-
-    //Handles the case when a user sends a message in command line format
-    if (messageText.startsWith('reminder')) {
-      console.log('starts with reminder');
-      //Splits our message into an array
-      var messageArray = messageText.toLowerCase().match(/(?:[^\s"]+|"[^"]*")+/g);
-
-      //Second argument is the action that the user wants to execute
-      var options = messageArray[1];
-
-      switch (options) {
-
-        //case for when a user wants to add a reminder
-        case '-add':
-          reminder = messageArray[2].slice(1, -1); //slice to ignore the quotation marks
-          time = messageArray[4].slice(1, -1); //slice to ignore the quotation marks
-          console.log(messageArray);
-          console.log(reminder, time);
-
-          //Makes sure that there is always a time option set
-          if (messageArray[3] === '-time' && messageArray.length === 5) {
-            messageActions.commandLineAddReminder(reminder, time, senderId);
-          }
-          else {
-            messageActions.sendDefault(senderId);
-          }
-          break;
-
-        //case for when a user wants to delete a reminder
-        case '-delete':
-          reminder = messageArray[2].slice(1, -1);
-          messageActions.commandLineDeleteReminder(reminder, senderId);
-          break;
-
-        //case for when a user wants to edit a reminder
-        case '-update':
-          reminder = messageArray[2].slice(1, -1);
-          time = messageArray[4].slice(1, -1);
-          console.log(messageArray);
-          console.log(reminder, time);
-          if (messageArray[3] === '-time' && messageArray.length === 5) {
-            messageActions.commandLineUpdateReminder(reminder, time, senderId);
-            //commandLineEditReminder(reminder,time, senderId);
-          }
-          else {
-            messageActions.sendDefault(senderId);
-          }
-          break;
-
-        //List our reminders
-        case '-list':
-          messageActions.sendReminderList(senderId);
-          break;
-
-        //Shows the command line options to the user
-        case '-help':
-          messageActions.commandLineHelpOptions(senderId);
-          break;
-
-        //Removes all reminders from our database
-        case '-clear':
-          messageActions.commandLineClear(senderId);
-          break;
-
-        //If the user inputs a malformed command
-        default:
-          messageActions.commandLineHelpOptions(senderId);
-      }
-    }
-    else {
-      console.log('readable reminder');
-      var containsAddReminder= messageText.indexOf(REMIND_OPTIONS.add[0]);
-      var containsTime = REGEX_TIME.test(messageText);
-      var containsClearReminder = messageText.indexOf(REMIND_OPTIONS.clear[0]);
-      var containsListReminder = messageText.indexOf(REMIND_OPTIONS.list[0]);
-      var containsThanks;
-
-      for(var i = 0, len = REMIND_OPTIONS.thanks.length; i < len; i++){
-        containsThanks = messageText.indexOf(REMIND_OPTIONS.list[i]);
-        if(containsThanks != -1){
-          break;
-        }
-      }
-
-      if(containsAddReminder != -1 && containsTime){
-        time = REGEX_TIME.exec(messageText)[0];
-        //If user doesn't supply am or pm then we want to grab the time that is next
-        if(!REGEX_AM_PM.test(messageText)){
-
-        }
-
-        //Get the lower and upper index of the reminder and time sub string
-        var reminderIndexLowerBound = containsAddReminder + REMIND_OPTIONS.add[0].length + 1;
-        var reminderIndexUpperBound = messageText.search(REGEX_TIME_AT) - 1;
-
-        reminder =  messageText.slice(reminderIndexLowerBound, reminderIndexUpperBound);
-
-        console.log('reminder ', reminder);
-        console.log('time', time);
-        messageActions.commandLineAddReminder(reminder, time, senderId);
-      }
-      else if(containsClearReminder != -1){
-        messageActions.commandLineClear(senderId);
-      }
-      else if(containsListReminder != -1){
-        messageActions.sendReminderList(senderId);
-      }
-      else if(containsThanks){
-        messageActions.respondToThanks(senderId);
-      }
-    }
-  }
-}
 
 /**
  * Handles when we received delivery confirmation. When the user sees the message.
