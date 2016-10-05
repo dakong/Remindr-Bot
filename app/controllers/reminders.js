@@ -134,7 +134,7 @@ const actions = {
 
       var reminder = entities.reminder[0].value;
       var date = entities.datetime[0].value;
-      var time = moment(entities.datetime[0].value).format('h:mm a');
+      var time = moment(entities.datetime[0].value).utcOffset('-0700').format('h:mm a');
       console.log('=====time in add reminder=====: ' + time);
       console.log('=====time in entity date time reminder=====: ' + entities.datetime[0].value);
       messageActions.addReminder(reminder, time, date, recipientId);
