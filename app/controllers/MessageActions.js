@@ -198,6 +198,24 @@ exports.commandLineUpdateReminder = function (reminder, time, recipientId) {
   });
 };
 
+exports.deleteReminder = function (reminderNumber, recipientId) {
+  Reminders.actions.delete(reminderNumber, function (cronJobId) {
+    //Stop our cronJob in our hash
+    console.log(cronJobId);
+    cronHash[cronJobId].stop();
+
+    var messageData = {
+      recipient: {
+        id: recipientId
+      },
+      message: {
+        text: "Deleted reminder: " + reminder
+      }
+    };
+    callSendAPI(messageData);
+  });
+};
+
 /**
  * This will form the message to send back to the user, after they have chosen to delete a reminder.
  * @param reminder the reminder the user wants removed.

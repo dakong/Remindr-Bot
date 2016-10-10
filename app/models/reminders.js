@@ -49,6 +49,7 @@ module.exports.actions.create = function (text, time, date, recipientId, sendMes
           else {
             console.log('Reminder successfully created');
             ReminderCount.actions.incrementCount(recipientId);
+            sortReminders(recipientId);
             sendMessage({'success': true});
           }
         });
@@ -92,20 +93,13 @@ module.exports.actions.edit = function (reminder, time, sendMessage) {
   });
 };
 
-// module.exports.actions.getAll = function (callBack) {
-//   Reminder.find(function (err, reminders) {
-//     if (err) {
-//       callBack(err, null);
-//     } else {
-//       callBack(null, reminders);
-//     }
-//   });
-// };
+
+//TODO Get reminders for recipients. We need to specify the recipient we are getting the reminder list.
 
 module.exports.actions.getAll = function () {
   return new Promise(function(resolve,reject) {
     var reminderList;
-    var promise = Reminder.find({}).exec();
+    var promise = Reminder.find({}).sort({reminderCount: 'asc'}).exec();
     promise.then(function (reminders) {
       console.log('mongoose promises');
       var reminderNames = reminders.map(function (el) {
@@ -136,23 +130,34 @@ module.exports.actions.getOne = function (req, res) {
   });
 };
 
-module.exports.actions.delete = function (reminder, callBack) {
-  console.log(reminder);
+module.exports.actions.delete = function (reminderNumber, sendMessage) {
   Reminder.findOne({
-    "name": reminder
-  },'name cronJobId', function(err, reminder){
-    console.log(reminder);
-    console.log('reminder: ', reminder.name);
+    "reminderCount": reminderNumber
+  }, 'name cronJobId recipientId', function (err, reminder) {
 
+    console.log('removing reminder: ', reminderw);
     Reminder.remove({
       "name": reminder.name
-    }, function(err){
-      if(err){
+    }).exec().then(function (err) {
+      if (err) {
         console.log(err);
       }
-      callBack(reminder.cronJobId);
+      ReminderCount.actions.decrementCount(reminder.recipientId).exec().then(function(){
+        sortReminders(reminder.recipientId);
+        });
+      sendMessage(reminder.cronJobId);
     });
   });
+};
+
+sortReminders = function(recipientId){
+  Reminder.find({recipientId: recipientId}).sort({cronTime: 'asc'}).exec(function(err,reminders) {
+    for(var i = 0, len = reminders.length; i < len; i++){
+      reminders[i].reminderCount = i + 1;
+      reminders[i].save();
+    }
+  })
+
 };
 
 module.exports.actions.update = function (req, res) {

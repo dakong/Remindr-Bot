@@ -202,7 +202,16 @@ const actions = {
       });
     });
   },
-  deleteReminder(){
+  deleteReminder({context,sessionId,text,entities}){
+    console.log('======= Delete Reminder =======');
+    const recipientId = sessions[sessionId].fbid;
+
+    return new Promise(function(resolve,reject){
+      var reminderNumber = entities.reminder_number[0].value;
+      console.log('reminder number: ', reminderNumber);
+      messageActions.deleteReminder(reminderNumber, recipientId);
+      return resolve(context);
+    });
 
   },
   editReminder(){
@@ -284,11 +293,13 @@ module.exports.userSentMessage = function (req, res) {
                   // Based on the session state, you might want to reset the session.
                   // This depends heavily on the business logic of your bot.
                   // Example:
-                  // if (context['done']) {
+                  //if (context['done']) {
                   //   delete sessions[sessionId];
-                  // }
+                  //}
 
                   // Updating the user's current session state
+                  console.log('context: ', context);
+                  context = {};
                   sessions[sessionId].context = context;
                 })
                 .catch((err) => {
