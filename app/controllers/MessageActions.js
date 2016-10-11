@@ -9,7 +9,6 @@ var Reminders = require('../models/reminders.js'),
 const PAGE_ACCESS_TOKEN = config.get('pageAccessToken');
 
 var exports = module.exports = {};
-//var cronHash = require('../cronJobs.js');
 var cronHash = {};
 
 callSendAPI = function (messageData) {
@@ -48,35 +47,37 @@ sendTextMessage = function (recipientId, messageText) {
 /**
  * Function that forms the message that the bot will send as a reminder to the user
  */
-sendReminderMessage = function(recipientId, reminder){
-  console.log('BOT IS SENDING A REMINDER');
+sendReminderMessage = function (recipientId, reminderNumber) {
+  console.log('BOT IS SENDING A REMINDER and deleting: ', reminderNumber);
 
-  Reminders.actions.delete(reminder, function () {
+  Reminders.actions.delete(reminderNumber, function (reminderName) {
     var messageData = {
       recipient: {
         id: recipientId
       },
       message: {
-        text: 'Hey I\'m reminding you to ' + reminder
+        text: 'Hey I\'m reminding you to ' + reminderName
       }
     };
     callSendAPI(messageData);
   });
 };
 
-exports.setInitialData = function(reminder){
+exports.setInitialData = function (reminder) {
   console.log('creating cron jobs from the database');
-  reminder.forEach(function(element){
+  reminder.forEach(function (element) {
 
     var cronDate = new Date(element.cronTime);
     console.log('creating cron job at ' + cronDate);
     cronHash[element.cronJobId] = new CronJob({
       cronTime: cronDate,
-      onTick : function(){sendReminderMessage(element.recipientId, element.name)},
-      start : true,
-      timeZone : 'America/Los_Angeles'
+      onTick: function () {
+        sendReminderMessage(element.recipientId, element.reminderCount)
+      },
+      start: true,
+      timeZone: 'America/Los_Angeles'
     });
-    console.log('populating cron hash: ',  cronHash);
+    console.log('populating cron hash: ', cronHash);
   });
 };
 
@@ -85,11 +86,11 @@ exports.setInitialData = function(reminder){
  * @param recipientId id of the user we want to send the list of reminder.
  */
 exports.sendReminderList = function (recipientId) {
-  return new Promise(function(resolve, reject){
-    var promise = new Promise(function(resolve,reject){
-      resolve(Reminders.actions.getAll());
+  return new Promise(function (resolve, reject) {
+    var promise = new Promise(function (resolve, reject) {
+      resolve(Reminders.actions.getAll(recipientId));
     });
-    promise.then(function(result){
+    promise.then(function (result) {
       console.log('getting all reminders: ' + result);
       return resolve('\n' + result);
     });
@@ -97,8 +98,8 @@ exports.sendReminderList = function (recipientId) {
 };
 
 
-exports.addReminder = function(reminder, time, date, recipientId){
-  Reminders.actions.create(reminder, time, date, recipientId, function (returnMsg) {
+exports.addReminder = function (reminder, time, date, recipientId) {
+  Reminders.actions.create(reminder, time, date, recipientId, function (returnMsg, reminderNumber) {
     console.log(returnMsg);
     if (returnMsg.success) {
       console.log('creating new cron job at: ' + date);
@@ -108,10 +109,13 @@ exports.addReminder = function(reminder, time, date, recipientId){
       //create our cron job
       cronHash[cronId] = new CronJob({
         cronTime: new Date(date),
-        onTick : function(){sendReminderMessage(recipientId, reminder)},
-        start : true,
-        timeZone : 'America/Los_Angeles'
+        onTick: function () {
+          sendReminderMessage(recipientId, reminderNumber)
+        },
+        start: true,
+        timeZone: 'America/Los_Angeles'
       });
+
       Reminders.actions.addCronJob(reminder, time, cronId);
       //sendTextMessage(recipientId, msg);
     }
@@ -159,9 +163,11 @@ exports.commandLineAddReminder = function (reminder, time, recipientId) {
       //create our cron job
       cronHash[cronId] = new CronJob({
         cronTime: cronDate,
-        onTick : function(){sendReminderMessage(recipientId, reminder)},
-        start : true,
-        timeZone : 'America/Los_Angeles'
+        onTick: function () {
+          sendReminderMessage(recipientId, reminder)
+        },
+        start: true,
+        timeZone: 'America/Los_Angeles'
       });
 
       Reminders.actions.addCronJob(reminder, time, cronId);
@@ -199,20 +205,17 @@ exports.commandLineUpdateReminder = function (reminder, time, recipientId) {
 };
 
 exports.deleteReminder = function (reminderNumber, recipientId) {
-  Reminders.actions.delete(reminderNumber, function (cronJobId) {
-    //Stop our cronJob in our hash
-    console.log(cronJobId);
-    cronHash[cronJobId].stop();
-
-    var messageData = {
-      recipient: {
-        id: recipientId
-      },
-      message: {
-        text: "Deleted reminder: " + reminder
-      }
-    };
-    callSendAPI(messageData);
+  console.log('delete reminder: ', reminderNumber);
+  var promise = new Promise(function (resolve, reject) {
+    resolve(Reminders.actions.getReminder(reminderNumber, recipientId));
+  });
+  promise.then(function (result) {
+    console.log('reminder object: ', result);
+    Reminders.actions.delete(result, function (cronJobId) {
+      //Stop our cronJob in our hash
+      console.log(cronJobId);
+      cronHash[cronJobId].stop();
+    });
   });
 };
 
@@ -262,20 +265,20 @@ exports.commandLineHelpOptions = function (recipientId) {
 exports.commandLineClear = function (recipientId) {
   var msg = "Reminder List has been cleared";
 
-  for(var jobId in cronHash){
-    if(cronHash.hasOwnProperty(jobId)){
+  for (var jobId in cronHash) {
+    if (cronHash.hasOwnProperty(jobId)) {
       cronHash[jobId].stop();
       console.log('Stopping cron job: ' + jobId);
     }
   }
-  Reminders.actions.clear(function(cronJobId){
+  Reminders.actions.clear(function (cronJobId) {
     console.log("stopping cronJob: " + cronJobId);
     cronHash[cronJobId].stop();
   });
   sendTextMessage(recipientId, msg);
 };
 
-exports.respondToThanks = function(recipientId) {
+exports.respondToThanks = function (recipientId) {
   var messageData = {
     recipient: {
       id: recipientId
@@ -287,14 +290,14 @@ exports.respondToThanks = function(recipientId) {
   callSendAPI(messageData);
 };
 
-exports.clearReminders = function (recipientId){
-  for(var jobId in cronHash){
-    if(cronHash.hasOwnProperty(jobId)){
+exports.clearReminders = function (recipientId) {
+  for (var jobId in cronHash) {
+    if (cronHash.hasOwnProperty(jobId)) {
       cronHash[jobId].stop();
       console.log('Stopping cron job: ' + jobId);
     }
   }
-  Reminders.actions.clear(function(cronJobId){
+  Reminders.actions.clear(function (cronJobId) {
     console.log("stopping cronJob: " + cronJobId);
     cronHash[cronJobId].stop();
   }, recipientId);

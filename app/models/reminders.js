@@ -3,9 +3,8 @@ var mongoose = require('mongoose'),
   moment = require('moment'),
   uuid = require('uuid'),
   ReminderCount = require('./userReminderCount.js');
-/**
- * Schema for our Reminders
- */
+
+//Schema for our Reminders
 var ReminderSchema = new Schema({
   name: String,
   time: String,
@@ -30,7 +29,7 @@ module.exports.actions.create = function (text, time, date, recipientId, sendMes
   Reminder.findOne({
     "name": text,
     "time": time
-  }).exec().then(function(reminders){
+  }).exec().then(function (reminders) {
     if (reminders === null) {
       var reminder = new Reminder();
       reminder.cronTime = date;
@@ -38,7 +37,7 @@ module.exports.actions.create = function (text, time, date, recipientId, sendMes
       reminder.time = time;
       reminder.recipientId = recipientId;
 
-      new Promise(function(resolve,reject){
+      new Promise(function (resolve, reject) {
         resolve(ReminderCount.actions.getCount(recipientId));
       }).then(function (reminderCount) {
         reminder.reminderCount = reminderCount + 1;
@@ -50,7 +49,7 @@ module.exports.actions.create = function (text, time, date, recipientId, sendMes
             console.log('Reminder successfully created');
             ReminderCount.actions.incrementCount(recipientId);
             sortReminders(recipientId);
-            sendMessage({'success': true});
+            sendMessage({'success': true}, reminder.reminderCount);
           }
         });
       });
@@ -61,20 +60,91 @@ module.exports.actions.create = function (text, time, date, recipientId, sendMes
   });
 };
 
-module.exports.actions.addCronJob = function(reminder, time, jobId){
+/**
+ * Returns a JavaScript Reminder Object given the number of the reminder
+ * @param reminderNumber
+ * @param recipientId
+ * @returns {Promise}
+ */
+module.exports.actions.getReminder = function (reminderNumber, recipientId) {
+  console.log('==== Get Reminder ====');
+  console.log('reminder number: ', reminderNumber, 'recipient id', recipientId);
+  return new Promise(function (resolve, reject) {
+    Reminder.findOne({
+      reminderCount: reminderNumber,
+      recipientId: recipientId
+    }, '_id name time reminderCount recipientId cronJobId', function (err, reminder) {
+
+      console.log('reminder object: ', reminder);
+      return resolve({
+        id: reminder._id,
+        name: reminder.name,
+        time: reminder.time,
+        reminderCount: reminder.reminderCount,
+        recipientId: reminder.recipientId,
+        cronJobId: reminder.cronJobId
+      });
+    });
+  });
+};
+
+/**
+ * Add a cronJob to a reminder
+ * @param reminder
+ * @param time
+ * @param jobId
+ */
+module.exports.actions.addCronJob = function (reminder, time, jobId) {
   console.log('adding cronJob: ' + jobId);
   Reminder.findOneAndUpdate({
     "name": reminder
   }, {
     "cronJobId": jobId
-  }, function(err){
-    if(err){
+  }, function (err) {
+    if (err) {
       console.log('error');
     }
-    else{
+    else {
       console.log('successfully added!');
     }
   })
+};
+
+//TODO Strip non db logic out and move it to controller (MessageActions.js)
+/**
+ * Returns a list of all Reminders
+ * @returns {Promise}
+ */
+module.exports.actions.getAll = function (recipientId) {
+  return new Promise(function (resolve, reject) {
+    var reminderList;
+    var promise = Reminder.find({recipientId: recipientId}).sort({reminderCount: 'asc'}).exec();
+    promise.then(function (reminders) {
+      var reminderNames = reminders.map(function (el) {
+        return el.reminderCount + ') ' + el.name + ' at ' + el.time;
+      });
+      if (reminderNames.length) {
+        reminderList = reminderNames.reduce(function (previousValue, currentValue, currentIndex, array) {
+          return previousValue + '\n' + currentValue;
+        });
+      }
+      else {
+        reminderList = '';
+      }
+      return resolve(reminderList);
+    });
+  });
+};
+
+module.exports.actions.delete = function (reminder, sendMessage) {
+  Reminder.findOneAndRemove({"_.id": reminder._id}, function (err) {
+    if (err) {
+      console.log('==== error in delete ====');
+      console.log(err);
+    }
+    ReminderCount.actions.decrementCount(reminder.recipientId);
+    sendMessage(reminder.cronJobId);
+  });
 };
 
 module.exports.actions.edit = function (reminder, time, sendMessage) {
@@ -91,73 +161,6 @@ module.exports.actions.edit = function (reminder, time, sendMessage) {
       sendMessage({'success': true});
     }
   });
-};
-
-
-//TODO Get reminders for recipients. We need to specify the recipient we are getting the reminder list.
-
-module.exports.actions.getAll = function () {
-  return new Promise(function(resolve,reject) {
-    var reminderList;
-    var promise = Reminder.find({}).sort({reminderCount: 'asc'}).exec();
-    promise.then(function (reminders) {
-      console.log('mongoose promises');
-      var reminderNames = reminders.map(function (el) {
-        return el.reminderCount + ') ' + el.name + ' at ' + el.time;
-      });
-      if (reminderNames.length) {
-        reminderList = reminderNames.reduce(function (previousValue, currentValue, currentIndex, array) {
-          return previousValue + '\n' + currentValue;
-        });
-      }
-      else {
-        reminderList = '';
-      }
-      console.log(reminderList);
-      return resolve(reminderList);
-    });
-  });
-};
-
-module.exports.actions.getOne = function (req, res) {
-  Reminder.findOne({
-    "_id": req.params.reminder_id
-  }, function (err, reminder) {
-    if (err) {
-      res.send(err);
-    }
-    res.send(reminder);
-  });
-};
-
-module.exports.actions.delete = function (reminderNumber, sendMessage) {
-  Reminder.findOne({
-    "reminderCount": reminderNumber
-  }, 'name cronJobId recipientId', function (err, reminder) {
-
-    console.log('removing reminder: ', reminderw);
-    Reminder.remove({
-      "name": reminder.name
-    }).exec().then(function (err) {
-      if (err) {
-        console.log(err);
-      }
-      ReminderCount.actions.decrementCount(reminder.recipientId).exec().then(function(){
-        sortReminders(reminder.recipientId);
-        });
-      sendMessage(reminder.cronJobId);
-    });
-  });
-};
-
-sortReminders = function(recipientId){
-  Reminder.find({recipientId: recipientId}).sort({cronTime: 'asc'}).exec(function(err,reminders) {
-    for(var i = 0, len = reminders.length; i < len; i++){
-      reminders[i].reminderCount = i + 1;
-      reminders[i].save();
-    }
-  })
-
 };
 
 module.exports.actions.update = function (req, res) {
@@ -179,17 +182,43 @@ module.exports.actions.update = function (req, res) {
   });
 };
 
+/**
+ * Clears all reminders from database, and stops their cron jobs
+ * @param stopCronJobs
+ * @param recipientId
+ */
 module.exports.actions.clear = function (stopCronJobs, recipientId) {
   console.log('clearing db');
-  Reminder.find({},function(err, reminder){
-    if(err){
+  Reminder.find({}, function (err, reminder) {
+    if (err) {
       console.log(err);
-    }else{
-      reminder.forEach(function(element){
+    } else {
+      reminder.forEach(function (element) {
         stopCronJobs(element.cronJobId);
       });
     }
   });
   Reminder.collection.remove({});
   ReminderCount.actions.clearCount(recipientId);
+};
+
+module.exports.actions.getOne = function (req, res) {
+  Reminder.findOne({
+    "_id": req.params.reminder_id
+  }, function (err, reminder) {
+    if (err) {
+      res.send(err);
+    }
+    res.send(reminder);
+  });
+};
+
+sortReminders = function (recipientId) {
+  Reminder.find({recipientId: recipientId}).sort({cronTime: 'asc'}).exec(function (err, reminders) {
+    for (var i = 0, len = reminders.length; i < len; i++) {
+      reminders[i].reminderCount = i + 1;
+      reminders[i].save();
+    }
+  })
+
 };
