@@ -122,7 +122,7 @@ exports.addReminder = function (reminderTask, time, date, recipientId) {
         start: true,
         timeZone: 'America/Los_Angeles'
       });
-      Reminders.actions.addCronJob(reminder, time, cronId);
+      Reminders.actions.addCronJob(reminder, cronId);
     }
     else if (returnMsg.msg === 'duplicate') {
       console.log('Found Duplicate Reminder');

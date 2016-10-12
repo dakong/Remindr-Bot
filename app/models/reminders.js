@@ -94,10 +94,11 @@ module.exports.actions.getReminder = function (reminderNumber, recipientId) {
  * @param time
  * @param jobId
  */
-module.exports.actions.addCronJob = function (reminder, time, jobId) {
+module.exports.actions.addCronJob = function (reminder, jobId) {
+  console.log('adding cronjob!!');
   console.log('adding cronJob: ' + jobId);
   Reminder.findOneAndUpdate({
-    "name": reminder
+    "name": reminder.name
   }, {
     "cronJobId": jobId
   }, function (err) {
