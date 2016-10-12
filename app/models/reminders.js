@@ -41,15 +41,15 @@ module.exports.actions.create = function (text, time, date, recipientId, sendMes
         resolve(ReminderCount.actions.getCount(recipientId));
       }).then(function (reminderCount) {
         reminder.reminderCount = reminderCount + 1;
-        reminder.save(function (err) {
+        reminder.save(function (err, reminder) {
           if (err) {
             sendMessage({'success': false, 'msg': 'Error saving reminder ' + text});
           }
           else {
-            console.log('Reminder successfully created');
+            console.log('Reminder successfully created: ', reminder);
             ReminderCount.actions.incrementCount(recipientId);
             sortReminders(recipientId);
-            sendMessage({'success': true}, reminder.reminderCount);
+            sendMessage({'success': true}, reminder);
           }
         });
       });
@@ -110,40 +110,30 @@ module.exports.actions.addCronJob = function (reminder, time, jobId) {
   })
 };
 
-//TODO Strip non db logic out and move it to controller (MessageActions.js)
 /**
  * Returns a list of all Reminders
  * @returns {Promise}
  */
 module.exports.actions.getAll = function (recipientId) {
   return new Promise(function (resolve, reject) {
-    var reminderList;
     var promise = Reminder.find({recipientId: recipientId}).sort({reminderCount: 'asc'}).exec();
     promise.then(function (reminders) {
-      var reminderNames = reminders.map(function (el) {
-        return el.reminderCount + ') ' + el.name + ' at ' + el.time;
-      });
-      if (reminderNames.length) {
-        reminderList = reminderNames.reduce(function (previousValue, currentValue, currentIndex, array) {
-          return previousValue + '\n' + currentValue;
-        });
-      }
-      else {
-        reminderList = '';
-      }
-      return resolve(reminderList);
+      return resolve(reminders);
     });
   });
 };
 
-module.exports.actions.delete = function (reminder, sendMessage) {
-  Reminder.findOneAndRemove({"_.id": reminder._id}, function (err) {
+module.exports.actions.delete = function (reminderId, recipientId) {
+  console.log('==== deleting reminder ====');
+  console.log('reminder id: ', reminderId, 'recipientId', recipientId);
+  Reminder.findOneAndRemove({"_id": reminderId, "recipientId": recipientId}, function (err, removed) {
     if (err) {
       console.log('==== error in delete ====');
       console.log(err);
     }
-    ReminderCount.actions.decrementCount(reminder.recipientId);
-    sendMessage(reminder.cronJobId);
+    console.log('removed object: ', removed);
+    ReminderCount.actions.decrementCount(recipientId);
+    sortReminders(recipientId);
   });
 };
 
@@ -187,7 +177,7 @@ module.exports.actions.update = function (req, res) {
  * @param stopCronJobs
  * @param recipientId
  */
-module.exports.actions.clear = function (stopCronJobs, recipientId) {
+module.exports.actions.clear = function (recipientId, stopCronJobs) {
   console.log('clearing db');
   Reminder.find({}, function (err, reminder) {
     if (err) {
@@ -220,5 +210,4 @@ sortReminders = function (recipientId) {
       reminders[i].save();
     }
   })
-
 };

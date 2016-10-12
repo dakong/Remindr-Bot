@@ -32,37 +32,28 @@ callSendAPI = function (messageData) {
   })
 };
 
-sendTextMessage = function (recipientId, messageText) {
+/**
+ * Function that forms the message that the bot will send as a reminder to the user
+ * @param {Object} reminder
+ */
+sendReminderMessage = function (reminder) {
+  console.log('BOT IS SENDING A REMINDER and deleting: ', reminder._id);
+  Reminders.actions.delete(reminder._id, reminder.recipientId);
   var messageData = {
     recipient: {
-      id: recipientId
+      id: reminder.recipientId
     },
     message: {
-      text: messageText
+      text: 'Hey I\'m reminding you to ' + reminder.name
     }
   };
   callSendAPI(messageData);
 };
 
 /**
- * Function that forms the message that the bot will send as a reminder to the user
+ * When the server initializes, it will grab the cron jobs info from the database and create them.
+ * @param {Object} reminder
  */
-sendReminderMessage = function (recipientId, reminderNumber) {
-  console.log('BOT IS SENDING A REMINDER and deleting: ', reminderNumber);
-
-  Reminders.actions.delete(reminderNumber, function (reminderName) {
-    var messageData = {
-      recipient: {
-        id: recipientId
-      },
-      message: {
-        text: 'Hey I\'m reminding you to ' + reminderName
-      }
-    };
-    callSendAPI(messageData);
-  });
-};
-
 exports.setInitialData = function (reminder) {
   console.log('creating cron jobs from the database');
   reminder.forEach(function (element) {
@@ -72,7 +63,7 @@ exports.setInitialData = function (reminder) {
     cronHash[element.cronJobId] = new CronJob({
       cronTime: cronDate,
       onTick: function () {
-        sendReminderMessage(element.recipientId, element.reminderCount)
+        sendReminderMessage(element);
       },
       start: true,
       timeZone: 'America/Los_Angeles'
@@ -83,127 +74,67 @@ exports.setInitialData = function (reminder) {
 
 /**
  * Sends a list of all the reminders for the user.
- * @param recipientId id of the user we want to send the list of reminder.
+ * @param {String} recipientId id of the user we want to send the list of reminder.
  */
 exports.sendReminderList = function (recipientId) {
   return new Promise(function (resolve, reject) {
     var promise = new Promise(function (resolve, reject) {
       resolve(Reminders.actions.getAll(recipientId));
     });
-    promise.then(function (result) {
-      console.log('getting all reminders: ' + result);
-      return resolve('\n' + result);
+    promise.then(function (reminderArray) {
+      var reminderList;
+      var reminderNames = reminderArray.map(function (reminder) {
+        return reminder.reminderCount + ') ' + reminder.name + ' at ' + reminder.time;
+      });
+      if (reminderNames.length) {
+        reminderList = reminderNames.reduce(function (previousValue, currentValue) {
+          return previousValue + '\n' + currentValue;
+        });
+      }
+      else {
+        reminderList = '';
+      }
+      console.log('getting all reminders: ' + reminderList);
+      return resolve('\n' + reminderList);
     });
   });
 };
 
-
-exports.addReminder = function (reminder, time, date, recipientId) {
-  Reminders.actions.create(reminder, time, date, recipientId, function (returnMsg, reminderNumber) {
-    console.log(returnMsg);
+/**
+ * Adds a reminder task and saves the time, date, and recipientId to the database
+ * @param {String} reminderTask
+ * @param {String} time
+ * @param {String} date
+ * @param {String} recipientId
+ */
+exports.addReminder = function (reminderTask, time, date, recipientId) {
+  Reminders.actions.create(reminderTask, time, date, recipientId, function (returnMsg, reminder) {
     if (returnMsg.success) {
       console.log('creating new cron job at: ' + date);
-      msg = 'I\'ll remind you to ' + reminder + ' at ' + time;
       var cronId = uuid.v4();
 
       //create our cron job
       cronHash[cronId] = new CronJob({
         cronTime: new Date(date),
         onTick: function () {
-          sendReminderMessage(recipientId, reminderNumber)
+          sendReminderMessage(reminder);
         },
         start: true,
         timeZone: 'America/Los_Angeles'
       });
-
       Reminders.actions.addCronJob(reminder, time, cronId);
-      //sendTextMessage(recipientId, msg);
     }
     else if (returnMsg.msg === 'duplicate') {
-      //msg = 'That reminder already exists!';
-      //sendTextMessage(recipientId, msg);
-    }
-  });
-};
-/**
- * This function will create the reminder and add it to the database.
- * @param reminder The task we want to remind the user
- * @param time The time we want to send our reminder to the user
- * @param recipientId The id we want to send the user too
- */
-exports.commandLineAddReminder = function (reminder, time, recipientId) {
-  var msg;
-  if (reminder === null || time === null) {
-    //handle case
-    return;
-  }
-
-  //Automatically set our cron date to today's date at the specified time.
-  //var cronDate = getCurrentDate(time);
-  //var momentDate = moment(time, "HH:mm A").add(7,'hour').format();
-  console.log('current utc time', new Date().getUTCDate());
-  console.log('time: ', time);
-  //var momentTime = moment(time,"HH:mm A").utc().add(7,'hour').format();
-  var momentTime = moment().zone("-08:00");
-  console.log('moment time ', momentTime);
-  var momentDate = moment(time, "HH:mm A").format();
-  console.log('moment date: ', momentDate);
-  var cronDate = new Date(momentDate);
-  console.log('cron date: ', cronDate);
-
-  Reminders.actions.create(reminder, time, cronDate, recipientId, function (returnMsg) {
-    console.log(returnMsg);
-    if (returnMsg.success) {
-
-      console.log('creating new cron job at: ' + cronDate);
-
-      msg = 'I\'ll remind you to ' + reminder + ' at ' + time;
-      var cronId = uuid.v4();
-
-      //create our cron job
-      cronHash[cronId] = new CronJob({
-        cronTime: cronDate,
-        onTick: function () {
-          sendReminderMessage(recipientId, reminder)
-        },
-        start: true,
-        timeZone: 'America/Los_Angeles'
-      });
-
-      Reminders.actions.addCronJob(reminder, time, cronId);
-      sendTextMessage(recipientId, msg);
-    }
-    else if (returnMsg.msg === 'duplicate') {
-      msg = 'That reminder already exists!';
-      sendTextMessage(recipientId, msg);
+      console.log('Found Duplicate Reminder');
     }
   });
 };
 
 /**
- * Function will edit an exist reminder and add it to the database.
- * @param reminder the item we want to edit.
- * @param time the new time we want to set the reminder to.
- * @param recipientId id of the user we want to edit the reminder for.
+ *
+ * @param {Number} reminderNumber
+ * @param {String} recipientId
  */
-exports.commandLineUpdateReminder = function (reminder, time, recipientId) {
-  var msg;
-  if (reminder === null || time === null) {
-    //throw an error
-    return;
-  }
-  Reminders.actions.edit(reminder, time, function (returnMsg) {
-    if (returnMsg.success) {
-      console.log('edit returned true');
-      msg = 'I\'ll remind you to ' + reminder + ' at ' + time + ' instead';
-    }
-    else {
-      msg = returnMsg.msg;
-    }
-    sendTextMessage(recipientId, msg);
-  });
-};
-
 exports.deleteReminder = function (reminderNumber, recipientId) {
   console.log('delete reminder: ', reminderNumber);
   var promise = new Promise(function (resolve, reject) {
@@ -211,85 +142,19 @@ exports.deleteReminder = function (reminderNumber, recipientId) {
   });
   promise.then(function (result) {
     console.log('reminder object: ', result);
-    Reminders.actions.delete(result, function (cronJobId) {
-      //Stop our cronJob in our hash
-      console.log(cronJobId);
-      cronHash[cronJobId].stop();
-    });
+    new Promise(function (resolve, reject) {
+      resolve(Reminders.actions.delete(result.id, result.recipientId));
+    }).then(function () {
+      console.log('stopping cronjob: ', result.cronJobId);
+      cronHash[result.cronJobId].stop();
+    })
   });
 };
 
 /**
- * This will form the message to send back to the user, after they have chosen to delete a reminder.
- * @param reminder the reminder the user wants removed.
- * @param recipientId the id of the user we want to delete the reminder from.
+ *
+ * @param {String} recipientId
  */
-exports.commandLineDeleteReminder = function (reminder, recipientId) {
-  Reminders.actions.delete(reminder, function (cronJobId) {
-    //Stop our cronJob in our hash
-    console.log(cronJobId);
-    cronHash[cronJobId].stop();
-
-    var messageData = {
-      recipient: {
-        id: recipientId
-      },
-      message: {
-        text: "Deleted reminder: " + reminder
-      }
-    };
-    callSendAPI(messageData);
-  });
-};
-
-/**
- * Forms the help message to send to the user.
- * @param recipientId id of the user we want to send help to.
- */
-exports.commandLineHelpOptions = function (recipientId) {
-  var messageData = {
-    recipient: {
-      id: recipientId
-    },
-    message: {
-      text: "Here is a list of Remind commands:\n-add \n-time \n-delete \n-clear \n-update \n-list "
-    }
-  };
-  callSendAPI(messageData);
-};
-
-/**
- * Clears all reminders from the database
- * @param recipientId id of the user we want to clear messages for
- */
-exports.commandLineClear = function (recipientId) {
-  var msg = "Reminder List has been cleared";
-
-  for (var jobId in cronHash) {
-    if (cronHash.hasOwnProperty(jobId)) {
-      cronHash[jobId].stop();
-      console.log('Stopping cron job: ' + jobId);
-    }
-  }
-  Reminders.actions.clear(function (cronJobId) {
-    console.log("stopping cronJob: " + cronJobId);
-    cronHash[cronJobId].stop();
-  });
-  sendTextMessage(recipientId, msg);
-};
-
-exports.respondToThanks = function (recipientId) {
-  var messageData = {
-    recipient: {
-      id: recipientId
-    },
-    message: {
-      text: "No problem bud"
-    }
-  };
-  callSendAPI(messageData);
-};
-
 exports.clearReminders = function (recipientId) {
   for (var jobId in cronHash) {
     if (cronHash.hasOwnProperty(jobId)) {
@@ -297,26 +162,8 @@ exports.clearReminders = function (recipientId) {
       console.log('Stopping cron job: ' + jobId);
     }
   }
-  Reminders.actions.clear(function (cronJobId) {
+  Reminders.actions.clear(recipientId, function (cronJobId) {
     console.log("stopping cronJob: " + cronJobId);
     cronHash[cronJobId].stop();
   }, recipientId);
-
 };
-
-/**
- * Default message to send when there is an unrecognized command
- * @param recipientId id of the user we want to send the message to
- */
-exports.sendDefault = function (recipientId) {
-  var messageData = {
-    recipient: {
-      id: recipientId
-    },
-    message: {
-      text: "Unrecognized command: \nPlease use the -help option to show list of commands"
-    }
-  };
-  callSendAPI(messageData);
-};
-
