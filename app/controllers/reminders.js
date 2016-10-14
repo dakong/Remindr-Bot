@@ -152,7 +152,7 @@ const actions = {
         console.log('=====time in entity date time reminder=====: ' + entities.datetime[0].value);
         messageActions.addReminder(reminder, time, date, recipientId);
         context.time = time;
-        context.finishedAdding = true;
+        context.done = true;
         delete context.missingTime;
       }else{
         context.missingTime = true;
@@ -166,7 +166,7 @@ const actions = {
     console.log('=====clear or list reminders=====');
 
     const recipientId = sessions[sessionId].fbid;
-    if(DEBUG) printWitLogs(sessionId,text,recipientId, context, entities);
+    if(DEBUG) printWitLogs(sessionId,recipientId,text, context, entities);
 
     return new Promise(function(resolve, reject){
       var action = firstEntityValue(entities, 'action');
@@ -183,6 +183,7 @@ const actions = {
         delete context.list;
       }
       console.log('context right before we return ', context);
+      context.done = true;
       return resolve(context);
     })
   },
@@ -200,6 +201,7 @@ const actions = {
         delete context.clear;
         delete context.list;
       }
+      context.done = true;
       return resolve(context);
     });
   },
@@ -218,6 +220,7 @@ const actions = {
       promise.then(function(result){
         context.listOfReminders = result;
         console.log('result in inner promise: ' + result);
+        context.done = true;
         return resolve(context);
       });
     });
@@ -229,6 +232,7 @@ const actions = {
       var reminderNumber = entities.reminder_number[0].value;
       console.log('reminder number: ', reminderNumber);
       messageActions.deleteReminder(reminderNumber, recipientId);
+      context.done = true;
       return resolve(context);
     });
   },
@@ -260,7 +264,7 @@ const actions = {
           delete context.responseOne;
           break;
       }
-
+      context.done = true;
       return resolve(context);
     });
   }
@@ -317,7 +321,7 @@ module.exports.userSentMessage = function (req, res) {
 
                   // Updating the user's current session state
                   // todo might need to remove this, and keep the context, when adding case for when user doesn't specify time
-                  if(context['finishedAdding']){
+                  if(context['done']){
                     context = {};
                   }
                   console.log('context should be cleared: ',context);

@@ -171,8 +171,5 @@ exports.clearReminders = function (recipientId) {
       console.log('Stopping cron job: ' + jobId);
     }
   }
-  Reminders.actions.clear(recipientId, function (cronJobId) {
-    console.log("stopping cronJob: " + cronJobId);
-    cronHash[cronJobId].stop();
-  }, recipientId);
+  Reminders.actions.clear(recipientId);
 };

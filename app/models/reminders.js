@@ -179,18 +179,18 @@ module.exports.actions.update = function (req, res) {
  * @param stopCronJobs
  * @param recipientId
  */
-module.exports.actions.clear = function (recipientId, stopCronJobs) {
+module.exports.actions.clear = function (recipientId) {
   console.log('clearing db');
-  Reminder.find({}, function (err, reminder) {
-    if (err) {
-      console.log(err);
-    } else {
-      reminder.forEach(function (element) {
-        stopCronJobs(element.cronJobId);
-      });
-    }
-  });
-  Reminder.collection.remove({});
+  //Reminder.find({}, function (err, reminder) {
+  //  if (err) {
+  //    console.log(err);
+  //  } else {
+  //    reminder.forEach(function (element) {
+  //      stopCronJobs(element.cronJobId);
+  //    });
+  //  }
+  //});
+  Reminder.collection.remove({'recipientId': recipientId});
   ReminderCount.actions.clearCount(recipientId);
 };
 
