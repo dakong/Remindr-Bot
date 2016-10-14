@@ -6,7 +6,13 @@ var Reminders = require('../models/reminders.js'),
   config = require('config'),
   uuid = require('uuid');
 
-const PAGE_ACCESS_TOKEN = config.get('pageAccessToken');
+var PAGE_ACCESS_TOKEN;
+if(process.env.LOCAL === 'true'){
+  PAGE_ACCESS_TOKEN = config.get('pageAccessToken');
+}
+else{
+  PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
+}
 
 var exports = module.exports = {};
 var cronHash = {};

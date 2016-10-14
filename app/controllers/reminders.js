@@ -4,10 +4,21 @@ const Reminders = require('../models/reminders.js'),
   {Wit,log} = require('node-wit'),
   moment = require('moment');
 
+var WIT_TOKEN;
+var VALIDATION_TOKEN;
+var FB_PAGE_TOKEN;
 /** Get our tokens **/
-const WIT_TOKEN = config.get('witToken');
-const VALIDATION_TOKEN = config.get('validationToken');
-const FB_PAGE_TOKEN = config.get('pageAccessToken');
+if(process.env.LOCAL === 'true'){
+  WIT_TOKEN = config.get('witToken');
+  VALIDATION_TOKEN = config.get('validationToken');
+  FB_PAGE_TOKEN = config.get('pageAccessToken');
+}
+else{
+  WIT_TOKEN = process.env.WIT_TOKEN;
+  VALIDATION_TOKEN = process.env.VALIDATION_TOKEN;
+  FB_PAGE_TOKEN = process.env.FB_PAGE_TOKEN;
+}
+
 
 const DEBUG = 1;
 
