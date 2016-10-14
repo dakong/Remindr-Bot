@@ -143,14 +143,22 @@ const actions = {
     const recipientId = sessions[sessionId].fbid;
     if(DEBUG) printWitLogs(sessionId,text,recipientId, context, entities);
     return new Promise(function(resolve, reject) {
-
-      var reminder = entities.reminder[0].value;
-      var date = entities.datetime[0].value;
-      var time = moment(entities.datetime[0].value).utcOffset('-0700').format('h:mm a');
-      console.log('=====time in add reminder=====: ' + time);
-      console.log('=====time in entity date time reminder=====: ' + entities.datetime[0].value);
-      messageActions.addReminder(reminder, time, date, recipientId);
-      context.time = time;
+      if(entities.datetime !== undefined) {
+        console.log('not supposed to be here');
+        var reminder = context.missingTime ? context.reminder : entities.reminder[0].value;
+        var date = entities.datetime[0].value;
+        var time = moment(entities.datetime[0].value).utcOffset('-0700').format('h:mm a');
+        console.log('=====time in add reminder=====: ' + time);
+        console.log('=====time in entity date time reminder=====: ' + entities.datetime[0].value);
+        messageActions.addReminder(reminder, time, date, recipientId);
+        context.time = time;
+        context.finishedAdding = true;
+        delete context.missingTime;
+      }else{
+        context.missingTime = true;
+        context.reminder = entities.reminder[0].value;
+        delete context.time;
+      }
       return resolve(context);
     });
   },
@@ -217,14 +225,12 @@ const actions = {
   deleteReminder({context,sessionId,text,entities}){
     console.log('======= Delete Reminder =======');
     const recipientId = sessions[sessionId].fbid;
-
     return new Promise(function(resolve,reject){
       var reminderNumber = entities.reminder_number[0].value;
       console.log('reminder number: ', reminderNumber);
       messageActions.deleteReminder(reminderNumber, recipientId);
       return resolve(context);
     });
-
   },
   editReminder(){
 
@@ -310,8 +316,11 @@ module.exports.userSentMessage = function (req, res) {
                   //}
 
                   // Updating the user's current session state
-                  console.log('context: ', context);
-                  context = {};
+                  // todo might need to remove this, and keep the context, when adding case for when user doesn't specify time
+                  if(context['finishedAdding']){
+                    context = {};
+                  }
+                  console.log('context should be cleared: ',context);
                   sessions[sessionId].context = context;
                 })
                 .catch((err) => {

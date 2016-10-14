@@ -23,40 +23,41 @@ module.exports.actions = {};
  * @param time
  * @param date
  * @param recipientId
- * @param sendMessage
  */
-module.exports.actions.create = function (text, time, date, recipientId, sendMessage) {
-  Reminder.findOne({
-    "name": text,
-    "time": time
-  }).exec().then(function (reminders) {
-    if (reminders === null) {
-      var reminder = new Reminder();
-      reminder.cronTime = date;
-      reminder.name = text;
-      reminder.time = time;
-      reminder.recipientId = recipientId;
+module.exports.actions.create = function (text, time, date, recipientId) {
+  return new Promise(function (resolve, reject) {
+    Reminder.findOne({
+      "name": text,
+      "time": time
+    }).exec().then(function (reminders) {
+      if (reminders === null) {
+        var reminder = new Reminder();
+        reminder.cronTime = date;
+        reminder.name = text;
+        reminder.time = time;
+        reminder.recipientId = recipientId;
 
-      new Promise(function (resolve, reject) {
-        resolve(ReminderCount.actions.getCount(recipientId));
-      }).then(function (reminderCount) {
-        reminder.reminderCount = reminderCount + 1;
-        reminder.save(function (err, reminder) {
-          if (err) {
-            sendMessage({'success': false, 'msg': 'Error saving reminder ' + text});
-          }
-          else {
-            console.log('Reminder successfully created: ', reminder);
-            ReminderCount.actions.incrementCount(recipientId);
-            sortReminders(recipientId);
-            sendMessage({'success': true}, reminder);
-          }
+        new Promise(function (resolve, reject) {
+          resolve(ReminderCount.actions.getCount(recipientId));
+        }).then(function (reminderCount) {
+          reminder.reminderCount = reminderCount + 1;
+          reminder.save(function (err, reminder) {
+            if (err) {
+              return resolve({'success': false, 'msg': 'Error saving reminder ' + text});
+            }
+            else {
+              console.log('Reminder successfully created: ', reminder);
+              ReminderCount.actions.incrementCount(recipientId);
+              sortReminders(recipientId);
+              return resolve({'success': true, 'reminder': reminder});
+            }
+          });
         });
-      });
-    }
-    else {
-      sendMessage({'success': false, 'msg': 'Reminder already exists'})
-    }
+      }
+      else {
+        return resolve({'success': false, 'msg': 'Error saving reminder ' + text});
+      }
+    });
   });
 };
 

@@ -7,10 +7,10 @@ var Reminders = require('../models/reminders.js'),
   uuid = require('uuid');
 
 var PAGE_ACCESS_TOKEN;
-if(process.env.LOCAL === 'true'){
+if (process.env.LOCAL === 'true') {
   PAGE_ACCESS_TOKEN = config.get('pageAccessToken');
 }
-else{
+else {
   PAGE_ACCESS_TOKEN = process.env.pageAccessToken;
 }
 
@@ -114,28 +114,31 @@ exports.sendReminderList = function (recipientId) {
  * @param {String} recipientId
  */
 exports.addReminder = function (reminderTask, time, date, recipientId) {
-  Reminders.actions.create(reminderTask, time, date, recipientId, function (returnMsg, reminder) {
-    if (returnMsg.success) {
-      console.log('creating new cron job at: ' + date);
-      var cronId = uuid.v4();
-
-      //create our cron job
-      cronHash[cronId] = new CronJob({
-        cronTime: new Date(date),
-        onTick: function () {
-          sendReminderMessage(reminder);
-        },
-        start: true,
-        timeZone: 'America/Los_Angeles'
-      });
-      Reminders.actions.addCronJob(reminder, cronId);
-    }
-    else if (returnMsg.msg === 'duplicate') {
-      console.log('Found Duplicate Reminder');
-    }
+  new Promise(function (resolve, reject) {
+    resolve(Reminders.actions.create(reminderTask, time, date, recipientId));
+  }).then(function (result) {
+    console.log('result from create: ', result);
+    addCronJob(result.success, result.reminder, date);
   });
 };
 
+addCronJob = function (success, reminder, date) {
+  if (success) {
+    console.log('creating new cron job at: ' + date);
+    var cronId = uuid.v4();
+
+    //create our cron job
+    cronHash[cronId] = new CronJob({
+      cronTime: new Date(date),
+      onTick: function () {
+        sendReminderMessage(reminder);
+      },
+      start: true,
+      timeZone: 'America/Los_Angeles'
+    });
+    Reminders.actions.addCronJob(reminder, cronId);
+  }
+};
 /**
  *
  * @param {Number} reminderNumber
