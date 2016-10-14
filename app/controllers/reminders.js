@@ -15,6 +15,7 @@ if(process.env.LOCAL === 'true'){
 }
 else{
   WIT_TOKEN = process.env.WIT_TOKEN;
+  console.log(WIT_TOKEN);
   VALIDATION_TOKEN = process.env.VALIDATION_TOKEN;
   FB_PAGE_TOKEN = process.env.FB_PAGE_TOKEN;
 }
