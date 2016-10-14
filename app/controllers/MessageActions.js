@@ -11,7 +11,7 @@ if(process.env.LOCAL === 'true'){
   PAGE_ACCESS_TOKEN = config.get('pageAccessToken');
 }
 else{
-  PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
+  PAGE_ACCESS_TOKEN = process.env.pageAccessToken;
 }
 
 var exports = module.exports = {};

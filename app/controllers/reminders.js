@@ -14,10 +14,10 @@ if(process.env.LOCAL === 'true'){
   FB_PAGE_TOKEN = config.get('pageAccessToken');
 }
 else{
-  WIT_TOKEN = process.env.WIT_TOKEN;
+  WIT_TOKEN = process.env.witToken;
   console.log(WIT_TOKEN);
-  VALIDATION_TOKEN = process.env.VALIDATION_TOKEN;
-  FB_PAGE_TOKEN = process.env.FB_PAGE_TOKEN;
+  VALIDATION_TOKEN = process.env.validationToken;
+  FB_PAGE_TOKEN = process.env.pageAccessToken;
 }
 
 

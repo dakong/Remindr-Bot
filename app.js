@@ -15,7 +15,7 @@ if (process.env.LOCAL === 'true') {
   DB_URL = config.get('dbURL');
 }
 else {
-  DB_URL = process.env.DB_URL;
+  DB_URL = process.env.dbURL;
 }
 
 
