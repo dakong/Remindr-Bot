@@ -1,4 +1,5 @@
 var Reminders = require('./models/reminders.js');
+var Actions = require('./controllers/MessageActions.js');
 
 module.exports.api = {};
 
@@ -17,4 +18,10 @@ module.exports.api.create = function (req, res){
 
 module.exports.api.delete = function(req,res){
 
+};
+
+module.exports.api.clearAll = function(req,res){
+  //console.log('request in clear ', req);
+  Actions.clearReminders(req.params.recipientId);
+  res.sendStatus(200);
 };

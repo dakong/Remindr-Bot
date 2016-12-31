@@ -1,7 +1,6 @@
 var mongoose = require('mongoose'),
   Schema = mongoose.Schema,
   moment = require('moment'),
-  uuid = require('uuid'),
   ReminderCount = require('./userReminderCount.js');
 
 //Schema for our Reminders
@@ -111,7 +110,6 @@ module.exports.actions.addCronJob = function (reminder, jobId) {
     }
   })
 };
-
 /**
  * Returns a list of all Reminders
  * @returns {Promise}
@@ -126,11 +124,9 @@ module.exports.actions.getAll = function (recipientId) {
 };
 
 module.exports.actions.delete = function (reminderId, recipientId) {
-  console.log('==== deleting reminder ====');
   console.log('reminder id: ', reminderId, 'recipientId', recipientId);
   Reminder.findOneAndRemove({"_id": reminderId, "recipientId": recipientId}, function (err, removed) {
     if (err) {
-      console.log('==== error in delete ====');
       console.log(err);
     }
     console.log('removed object: ', removed);
@@ -180,7 +176,7 @@ module.exports.actions.update = function (req, res) {
  * @param recipientId
  */
 module.exports.actions.clear = function (recipientId) {
-  console.log('clearing db');
+  console.log('clearing db for recipient: ', recipientId);
   //Reminder.find({}, function (err, reminder) {
   //  if (err) {
   //    console.log(err);
@@ -205,7 +201,7 @@ module.exports.actions.getOne = function (req, res) {
   });
 };
 
-sortReminders = function (recipientId) {
+var sortReminders = function (recipientId) {
   Reminder.find({recipientId: recipientId}).sort({cronTime: 'asc'}).exec(function (err, reminders) {
     for (var i = 0, len = reminders.length; i < len; i++) {
       reminders[i].reminderCount = i + 1;

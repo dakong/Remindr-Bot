@@ -17,7 +17,7 @@ else {
 var exports = module.exports = {};
 var cronHash = {};
 
-callSendAPI = function (messageData) {
+var callSendAPI = function (messageData) {
   request({
     uri: 'https://graph.facebook.com/v2.6/me/messages',
     qs: {
@@ -42,7 +42,7 @@ callSendAPI = function (messageData) {
  * Function that forms the message that the bot will send as a reminder to the user
  * @param {Object} reminder
  */
-sendReminderMessage = function (reminder) {
+var sendReminderMessage = function (reminder) {
   console.log('BOT IS SENDING A REMINDER and deleting: ', reminder._id);
   Reminders.actions.delete(reminder._id, reminder.recipientId);
   var messageData = {
@@ -90,7 +90,7 @@ exports.sendReminderList = function (recipientId) {
     promise.then(function (reminderArray) {
       var reminderList;
       var reminderNames = reminderArray.map(function (reminder) {
-        return reminder.reminderCount + ') ' + reminder.name + ' at ' + reminder.time;
+        return reminder.reminderCount + ') ' + reminder.name + ' on ' + reminder.time;
       });
       if (reminderNames.length) {
         reminderList = reminderNames.reduce(function (previousValue, currentValue) {
@@ -117,16 +117,13 @@ exports.addReminder = function (reminderTask, time, date, recipientId) {
   new Promise(function (resolve, reject) {
     resolve(Reminders.actions.create(reminderTask, time, date, recipientId));
   }).then(function (result) {
-    console.log('result from create: ', result);
     addCronJob(result.success, result.reminder, date);
   });
 };
 
-addCronJob = function (success, reminder, date) {
+var addCronJob = function (success, reminder, date) {
   if (success) {
-    console.log('creating new cron job at: ' + date);
     var cronId = uuid.v4();
-
     //create our cron job
     cronHash[cronId] = new CronJob({
       cronTime: new Date(date),
@@ -154,7 +151,6 @@ exports.deleteReminder = function (reminderNumber, recipientId) {
     new Promise(function (resolve, reject) {
       resolve(Reminders.actions.delete(result.id, result.recipientId));
     }).then(function () {
-      console.log('stopping cronjob: ', result.cronJobId);
       cronHash[result.cronJobId].stop();
     })
   });
@@ -168,7 +164,6 @@ exports.clearReminders = function (recipientId) {
   for (var jobId in cronHash) {
     if (cronHash.hasOwnProperty(jobId)) {
       cronHash[jobId].stop();
-      console.log('Stopping cron job: ' + jobId);
     }
   }
   Reminders.actions.clear(recipientId);
