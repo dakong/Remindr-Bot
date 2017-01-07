@@ -7,17 +7,20 @@ const Reminders = require('../models/reminders.js'),
 var WIT_TOKEN;
 var VALIDATION_TOKEN;
 var FB_PAGE_TOKEN;
+var NEWS_API_KEY;
 //Get our Tokens
 if (process.env.LOCAL === 'true') {
   WIT_TOKEN = config.get('witToken');
   VALIDATION_TOKEN = config.get('validationToken');
   FB_PAGE_TOKEN = config.get('pageAccessToken');
+  NEWS_API_KEY = config.get('newsApiKey');
 }
 else {
   WIT_TOKEN = process.env.witToken;
   console.log(WIT_TOKEN);
   VALIDATION_TOKEN = process.env.validationToken;
   FB_PAGE_TOKEN = process.env.pageAccessToken;
+  NEWS_API_KEY = process.env.newsApiKey;
 }
 
 const DEBUG = 1;
@@ -156,7 +159,6 @@ const actions = {
           cronDate = (dateRangeTo.getTime() + dateRangeFrom.getTime())/2;
           reminderTime = moment(cronDate).utcOffset('-0800').format('MMMM Do, h:mm a');
         }
-        console.log('========== ', reminder);
         messageActions.addReminder(reminder, reminderTime, cronDate, recipientId);
         context.time = reminderTime;
         context.done = true;
@@ -189,9 +191,11 @@ const actions = {
   //Action to delete a specific reminder
   deleteReminder({context, sessionId, text, entities}){
     const recipientId = sessions[sessionId].fbid;
+
+    if (DEBUG) printWitLogs(sessionId, recipientId,  text, context, entities);
+
     return new Promise(function (resolve, reject) {
-      var reminderNumber = entities.reminder_number[0].value;
-      console.log('reminder number: ', reminderNumber);
+      var reminderNumber = entities.number[0].value;
       messageActions.deleteReminder(reminderNumber, recipientId);
       context.done = true;
       return resolve(context);
@@ -327,3 +331,17 @@ function receivedAuthentication(event) {
   //comment for now`
   /*messageActions.sendTextMessage(senderID, "Authentication successful");*/
 }
+
+module.exports.getNews = function (req,res) {
+  var newsSource = req.params.source;
+  return fetch("https://newsapi.org/v1/articles?source=" + newsSource + "&apiKey=" + NEWS_API_KEY,{
+    method: 'get'
+  }).then(function(response){
+    return response.json();
+  }).then(function(data){
+    res.status(200).send(data);
+  }).catch(function(error){
+    console.log('oops an error occurred');
+    res.status(404).send(error);
+  });
+};
