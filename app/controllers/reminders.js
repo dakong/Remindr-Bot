@@ -3,7 +3,7 @@ const Reminders = require('../models/reminders.js'),
   config = require('config'),
   {Wit, log} = require('node-wit'),
   moment = require('moment');
-
+var request = require('request');
 var WIT_TOKEN;
 var VALIDATION_TOKEN;
 var FB_PAGE_TOKEN;
@@ -201,6 +201,18 @@ const actions = {
       return resolve(context);
     });
   },
+  fetchNewsArticles({context, entities, sessionId, text}){
+    const recipientId = sessions[sessionId].fbid;
+    if (DEBUG) printWitLogs(sessionId, recipientId,  text, context, entities);
+    return new Promise(function (resolve, reject) {
+      var newsSource = entities.news_source[0].value;
+      console.log('news source is ', newsSource);
+      messageActions.fetchArticles(newsSource, recipientId);
+      context.done = true;
+      context.newsSource = newsSource;
+      return resolve(context);
+    });
+  },
   //Action to generate a thank you response
   generateThankYou({context, sessionId, text}){
     const recipientId = sessions[sessionId].fbid;
@@ -227,6 +239,7 @@ const actions = {
       return resolve(context);
     });
   }
+
 };
 
 //create our wit object
@@ -343,5 +356,43 @@ module.exports.getNews = function (req,res) {
   }).catch(function(error){
     console.log('oops an error occurred');
     res.status(404).send(error);
+  });
+};
+
+module.exports.getWhiteList = function (req,res) {
+  return fetch("https://graph.facebook.com/v2.6/me/thread_settings?fields=whitelisted_domains&access_token="+FB_PAGE_TOKEN, {
+    method: 'get'
+  }).then(function(response){
+    return response.json();
+  }).then(function(data){
+    res.status(200).send(data);
+  }).catch(function(error){
+    console.log('oops an error occurred');
+    res.status(404).send(error);
+  });
+};
+
+module.exports.removeWhiteList = function (req,res) {
+  request({
+    uri: 'https://graph.facebook.com/me/thread_settings',
+    qs: {
+      access_token: FB_PAGE_TOKEN
+    },
+    method: 'POST',
+    json: {
+      setting_type: "domain_whitelisting",
+      whitelisted_domains : [
+  ],
+      domain_action_type : "remove"
+    }
+  }, function (error, response, body) {
+    console.log(response);
+    if (!error && response.statusCode === 200) {
+      res.status(200).send(response);
+    } else {
+      console.error('Unable to clear white list.');
+      console.error(error);
+      res.status(404).send(error);
+    }
   });
 };

@@ -45,6 +45,7 @@ Reminder.find({}, function (err, reminder) {
     MessageActions.setInitialData(reminder);
     app.listen(port);
     console.log('Listening on port ' + port);
+    MessageActions.setWhiteList();
   }
 });
 
