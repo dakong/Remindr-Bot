@@ -34,6 +34,15 @@ function printWitLogs(sessionId, recipientId, text, context, entities) {
   console.log(`Wit extracted ${JSON.stringify(entities)}`);
 }
 
+const newsMap = {
+  "business-insider" : "Business Insider",
+  "cnn" : "CNN",
+  "techcrunch" : "TechCrunch",
+  "buzzfeed" : "BuzzFeed",
+  "hacker-news" : "Hacker News",
+  "the-verge" : "The Verge"
+};
+
 module.exports = {};
 
 /**
@@ -209,7 +218,7 @@ const actions = {
       console.log('news source is ', newsSource);
       messageActions.fetchArticles(newsSource, recipientId);
       context.done = true;
-      context.newsSource = newsSource;
+      context.newsSource = newsMap[newsSource];
       return resolve(context);
     });
   },
@@ -386,7 +395,6 @@ module.exports.removeWhiteList = function (req,res) {
       domain_action_type : "remove"
     }
   }, function (error, response, body) {
-    console.log(response);
     if (!error && response.statusCode === 200) {
       res.status(200).send(response);
     } else {

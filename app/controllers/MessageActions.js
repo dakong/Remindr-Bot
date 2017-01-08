@@ -51,7 +51,7 @@ exports.setWhiteList = function(){
     method: 'POST',
     json: {
       setting_type: "domain_whitelisting",
-      whitelisted_domains : ["https://www.techcrunch.com/", "https://www.cnn.com/", "https://www.buzzfeed.com/","https://www.businessinsider.com/"],
+      whitelisted_domains : ["https://www.techcrunch.com/", "https://www.cnn.com/", "https://www.buzzfeed.com/","https://www.businessinsider.com/", "https://www.theverge.com/"],
       domain_action_type : "add"
     }
   }, function (error, response, body) {
@@ -74,12 +74,11 @@ var sendNewsListAPI = function(listData){
     method: 'POST',
     json: listData
   }, function (error, response, body) {
-    console.log(body);
+    console.log(response);
     if (!error && response.statusCode === 200) {
       console.log('Call send api success');
       var recipientId = body.recipient_id;
       var messageId = body.message_id;
-      console.log(response);
     } else {
       console.error('Unable to send Message.');
       console.error(error);
@@ -213,19 +212,21 @@ exports.fetchArticles = function(source, recipientId){
     return response.json();
   }).then(function(data){
     var articles = data.articles.slice(0,4);
-    var articleList = toNewsList(articles, recipientId);
+    var articleList = toNewsList(articles, recipientId, data.source);
     sendNewsListAPI(articleList);
   }).catch(function(error){
-    console.log('oops an error occurred');
+    console.log('oops an error occurred :(');
   });
 };
 
-var toNewsList = function(listData, recipientId){
+var toNewsList = function(listData, recipientId, source){
   var articleList = listData.map((article) => {
-
     var articleUrl;
 
-    if(article.url.includes('https')){
+    if(source === 'techcrunch'){
+      articleUrl = article.url.replace('http://social.', 'https://www.');
+    }
+    else if(article.url.includes('https')){
       articleUrl = article.url;
     }
     else{
