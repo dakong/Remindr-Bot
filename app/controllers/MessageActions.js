@@ -1,4 +1,4 @@
-var Reminders = require('../models/reminders.js'),
+var ReminderAction = require('../models/Reminder/ReminderActions.js'),
   fs = require('fs'),
   CronJob = require('cron').CronJob,
   moment = require('moment'),
@@ -55,7 +55,6 @@ exports.setWhiteList = function(){
       domain_action_type : "add"
     }
   }, function (error, response, body) {
-    console.log(response);
     if (!error && response.statusCode === 200) {
       console.log('Validated white list');
     } else {
@@ -74,7 +73,6 @@ var sendNewsListAPI = function(listData){
     method: 'POST',
     json: listData
   }, function (error, response, body) {
-    console.log(response);
     if (!error && response.statusCode === 200) {
       console.log('Call send api success');
       var recipientId = body.recipient_id;
@@ -92,7 +90,7 @@ var sendNewsListAPI = function(listData){
  */
 var sendReminderMessage = function (reminder) {
   console.log('BOT IS SENDING A REMINDER and deleting: ', reminder._id);
-  Reminders.actions.delete(reminder._id, reminder.recipientId);
+  ReminderAction.delete(reminder._id, reminder.recipientId);
   var messageData = {
     recipient: {
       id: reminder.recipientId
@@ -133,7 +131,7 @@ exports.setInitialData = function (reminder) {
 exports.sendReminderList = function (recipientId) {
   return new Promise(function (resolve, reject) {
     var promise = new Promise(function (resolve, reject) {
-      resolve(Reminders.actions.getAll(recipientId));
+      resolve(ReminderAction.getAll(recipientId));
     });
     promise.then(function (reminderArray) {
       var reminderList;
@@ -163,7 +161,7 @@ exports.sendReminderList = function (recipientId) {
  */
 exports.addReminder = function (reminderTask, time, date, recipientId) {
   new Promise(function (resolve, reject) {
-    resolve(Reminders.actions.create(reminderTask, time, date, recipientId));
+    resolve(ReminderAction.create(reminderTask, time, date, recipientId));
   }).then(function (result) {
     addCronJob(result.success, result.reminder, date);
   });
@@ -181,7 +179,7 @@ var addCronJob = function (success, reminder, date) {
       start: true,
       timeZone: 'America/Los_Angeles'
     });
-    Reminders.actions.addCronJob(reminder, cronId);
+    ReminderAction.addCronJob(reminder, cronId);
   }
 };
 /**
@@ -192,12 +190,12 @@ var addCronJob = function (success, reminder, date) {
 exports.deleteReminder = function (reminderNumber, recipientId) {
   console.log('delete reminder: ', reminderNumber);
   var promise = new Promise(function (resolve, reject) {
-    resolve(Reminders.actions.getReminder(reminderNumber, recipientId));
+    resolve(ReminderAction.getReminder(reminderNumber, recipientId));
   });
   promise.then(function (result) {
     console.log('reminder object: ', result);
     new Promise(function (resolve, reject) {
-      resolve(Reminders.actions.delete(result.id, result.recipientId));
+      resolve(ReminderAction.delete(result.id, result.recipientId));
     }).then(function () {
       cronHash[result.cronJobId].stop();
     })
@@ -275,6 +273,7 @@ var toNewsList = function(listData, recipientId, source){
     }
   };
 };
+
 /**
  *
  * @param {String} recipientId
@@ -285,7 +284,7 @@ exports.clearReminders = function (recipientId) {
       cronHash[jobId].stop();
     }
   }
-  Reminders.actions.clear(recipientId);
+  ReminderAction.clear(recipientId);
 };
 
 

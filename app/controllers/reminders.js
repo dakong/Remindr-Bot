@@ -1,4 +1,4 @@
-const Reminders = require('../models/reminders.js'),
+const Reminders = require('../models/Reminder/ReminderActions.js'),
   messageActions = require('./MessageActions.js'),
   config = require('config'),
   {Wit, log} = require('node-wit'),
@@ -266,6 +266,7 @@ const wit = new Wit({
 module.exports.userSentMessage = function (req, res) {
   var data = req.body;
   console.log('user sent message');
+  console.log('data: ', data);
   // Make sure this is a page subscription
   if (data.object == 'page') {
     // Iterate over each entry

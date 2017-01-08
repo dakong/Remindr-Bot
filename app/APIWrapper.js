@@ -1,4 +1,4 @@
-var Reminders = require('./models/reminders.js');
+var Reminders = require('./models/Reminder/ReminderActions.js');
 var Actions = require('./controllers/MessageActions.js');
 
 module.exports.api = {};

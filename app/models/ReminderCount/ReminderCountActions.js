@@ -1,18 +1,12 @@
-var mongoose = require('mongoose'),
-  Schema = mongoose.Schema;
+var ReminderCount = require('./ReminderCountSchema');
 
-var userReminderCountSchema = new Schema({
-  recipientId: String,
-  numberOfReminders: Number
-});
+var UserReminderCount = ReminderCount.Model;
 
-var UserReminderCount = mongoose.model("Reminder Count", userReminderCountSchema);
-
-module.exports.actions = {};
-module.exports.actions.findRecipient = function (recipientId) {
+module.exports = {};
+module.exports.findRecipient = function (recipientId) {
 };
 
-module.exports.actions.clearCount = function (recipientId) {
+module.exports.clearCount = function (recipientId) {
   console.log('=== clearing count ===');
   UserReminderCount.findOne({"recipientId": recipientId})
     .exec()
@@ -23,7 +17,7 @@ module.exports.actions.clearCount = function (recipientId) {
     });
 };
 
-module.exports.actions.getCount = function (recipientId) {
+module.exports.getCount = function (recipientId) {
   return new Promise(function (resolve, reject) {
     UserReminderCount.findOne({"recipientId": recipientId})
       .exec()
@@ -39,7 +33,7 @@ module.exports.actions.getCount = function (recipientId) {
   });
 };
 
-module.exports.actions.incrementCount = function (recipientId) {
+module.exports.incrementCount = function (recipientId) {
   UserReminderCount.findOne({"recipientId": recipientId})
     .exec()
     .then(function (recipientEntry) {
@@ -57,7 +51,7 @@ module.exports.actions.incrementCount = function (recipientId) {
     });
 };
 
-module.exports.actions.decrementCount = function (recipientId) {
+module.exports.decrementCount = function (recipientId) {
   UserReminderCount.findOne({"recipientId": recipientId}).exec().then(function (recipientEntry) {
     if (recipientEntry.numberOfReminders > 0) {
       recipientEntry.numberOfReminders--;
