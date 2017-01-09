@@ -8,6 +8,10 @@ var ReminderAction = require('../models/Reminder/ReminderActions.js'),
 
 var PAGE_ACCESS_TOKEN;
 var NEWS_API_KEY;
+var exports = module.exports = {};
+var cronHash = {};
+
+//Configuration Variables
 if (process.env.LOCAL === 'true') {
   PAGE_ACCESS_TOKEN = config.get('pageAccessToken');
   NEWS_API_KEY = config.get('newsApiKey');
@@ -17,11 +21,7 @@ else {
   NEWS_API_KEY = process.env.newsApiKey;
 }
 
-var exports = module.exports = {};
-var cronHash = {};
-
 var callSendAPI = function (messageData) {
-  console.log(messageData);
   request({
     uri: 'https://graph.facebook.com/me/messages',
     qs: {
@@ -32,51 +32,6 @@ var callSendAPI = function (messageData) {
   }, function (error, response, body) {
     if (!error && response.statusCode === 200) {
       console.log('Call send api success');
-      var recipientId = body.recipient_id;
-      var messageId = body.message_id;
-
-    } else {
-      console.error('Unable to send Message.');
-      console.error(error);
-    }
-  })
-};
-
-exports.setWhiteList = function(){
-  request({
-    uri: 'https://graph.facebook.com/me/thread_settings',
-    qs: {
-      access_token: PAGE_ACCESS_TOKEN
-    },
-    method: 'POST',
-    json: {
-      setting_type: "domain_whitelisting",
-      whitelisted_domains : ["https://www.techcrunch.com/", "https://www.cnn.com/", "https://www.buzzfeed.com/","https://www.businessinsider.com/", "https://www.theverge.com/"],
-      domain_action_type : "add"
-    }
-  }, function (error, response, body) {
-    if (!error && response.statusCode === 200) {
-      console.log('Validated white list');
-    } else {
-      console.error('Unable to validate white list.');
-      console.error(error);
-    }
-  });
-};
-
-var sendNewsListAPI = function(listData){
-  request({
-    uri: 'https://graph.facebook.com/me/messages',
-    qs: {
-      access_token: PAGE_ACCESS_TOKEN
-    },
-    method: 'POST',
-    json: listData
-  }, function (error, response, body) {
-    if (!error && response.statusCode === 200) {
-      console.log('Call send api success');
-      var recipientId = body.recipient_id;
-      var messageId = body.message_id;
     } else {
       console.error('Unable to send Message.');
       console.error(error);
@@ -103,15 +58,37 @@ var sendReminderMessage = function (reminder) {
 };
 
 /**
+ * Sets the white list for sites that can be accessed through the Messenger App
+ */
+exports.setWhiteList = function () {
+  request({
+    uri: 'https://graph.facebook.com/me/thread_settings',
+    qs: {
+      access_token: PAGE_ACCESS_TOKEN
+    },
+    method: 'POST',
+    json: {
+      setting_type: "domain_whitelisting",
+      whitelisted_domains: ["https://www.techcrunch.com/", "https://www.cnn.com/", "https://www.buzzfeed.com/", "https://www.businessinsider.com/", "https://www.theverge.com/"],
+      domain_action_type: "add"
+    }
+  }, function (error, response, body) {
+    if (!error && response.statusCode === 200) {
+      console.log('Validated white list');
+    } else {
+      console.error('Unable to validate white list.');
+      console.error(error);
+    }
+  });
+};
+
+/**
  * When the server initializes, it will grab the cron jobs info from the database and create them.
  * @param {Object} reminder
  */
 exports.setInitialData = function (reminder) {
-  console.log('creating cron jobs from the database');
   reminder.forEach(function (element) {
-
     var cronDate = new Date(element.cronTime);
-    console.log('creating cron job at ' + cronDate);
     cronHash[element.cronJobId] = new CronJob({
       cronTime: cronDate,
       onTick: function () {
@@ -120,7 +97,6 @@ exports.setInitialData = function (reminder) {
       start: true,
       timeZone: 'America/Los_Angeles'
     });
-    console.log('populating cron hash: ', cronHash);
   });
 };
 
@@ -146,7 +122,6 @@ exports.sendReminderList = function (recipientId) {
       else {
         reminderList = '';
       }
-      console.log('getting all reminders: ' + reminderList);
       return resolve('\n' + reminderList);
     });
   });
@@ -182,18 +157,17 @@ var addCronJob = function (success, reminder, date) {
     ReminderAction.addCronJob(reminder, cronId);
   }
 };
+
 /**
- *
+ * Action to delete a specific reminder based on its list number.
  * @param {Number} reminderNumber
  * @param {String} recipientId
  */
 exports.deleteReminder = function (reminderNumber, recipientId) {
-  console.log('delete reminder: ', reminderNumber);
   var promise = new Promise(function (resolve, reject) {
     resolve(ReminderAction.getReminder(reminderNumber, recipientId));
   });
   promise.then(function (result) {
-    console.log('reminder object: ', result);
     new Promise(function (resolve, reject) {
       resolve(ReminderAction.delete(result.id, result.recipientId));
     }).then(function () {
@@ -202,32 +176,33 @@ exports.deleteReminder = function (reminderNumber, recipientId) {
   });
 };
 
-exports.fetchArticles = function(source, recipientId){
+exports.fetchArticles = function (source, recipientId) {
   var newsSource = source.toLowerCase();
-  return fetch("https://newsapi.org/v1/articles?source=" + newsSource + "&sortBy=top&apiKey=" + NEWS_API_KEY,{
+  return fetch("https://newsapi.org/v1/articles?source=" + newsSource + "&sortBy=top&apiKey=" + NEWS_API_KEY, {
     method: 'get'
-  }).then(function(response){
+  }).then(function (response) {
     return response.json();
-  }).then(function(data){
-    var articles = data.articles.slice(0,4);
+  }).then(function (data) {
+    var articles = data.articles.slice(0, 4); //we are limited to four articles
     var articleList = toNewsList(articles, recipientId, data.source);
-    sendNewsListAPI(articleList);
-  }).catch(function(error){
-    console.log('oops an error occurred :(');
+    callSendAPI(articleList);
+  }).catch(function (error) {
+    console.log('oops an error occurred');
+    console.log(error);
   });
 };
 
-var toNewsList = function(listData, recipientId, source){
+var toNewsList = function (listData, recipientId, source) {
   var articleList = listData.map((article) => {
     var articleUrl;
 
-    if(source === 'techcrunch'){
+    if (source === 'techcrunch') {
       articleUrl = article.url.replace('http://social.', 'https://www.');
     }
-    else if(article.url.includes('https')){
+    else if (article.url.includes('https')) {
       articleUrl = article.url;
     }
-    else{
+    else {
       articleUrl = article.url.replace("http", 'https');
     }
     console.log('article url ', articleUrl);
@@ -238,21 +213,19 @@ var toNewsList = function(listData, recipientId, source){
       subtitle: article.author,
       default_action: {
         type: "web_url",
-        //url: article.url.replace("http://social.", 'https://'),
         url: articleUrl,
         messenger_extensions: true,
         webview_height_ratio: "tall",
-        fallback_url : articleUrl
+        fallback_url: articleUrl
       },
-      buttons : [
+      buttons: [
         {
           title: "View",
           type: "web_url",
           url: articleUrl,
-          //url: article.url.replace("http://social.", 'https://'),
           messenger_extensions: true,
           webview_height_ratio: "tall",
-          fallback_url : articleUrl
+          fallback_url: articleUrl
         }
       ]
     }
@@ -261,13 +234,13 @@ var toNewsList = function(listData, recipientId, source){
     recipient: {
       id: recipientId
     },
-    message : {
-      attachment : {
+    message: {
+      attachment: {
         type: "template",
-        payload : {
+        payload: {
           template_type: "list",
           top_element_style: "compact",
-          elements : articleList
+          elements: articleList
         }
       }
     }

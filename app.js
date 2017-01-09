@@ -4,26 +4,20 @@ const
   config = require('config'),
   https = require('https'),
   mongoose = require('mongoose'),
-  cronJob = require('cron'),
   MessageActions = require('./app/controllers/MessageActions.js');
+
 app = express();
 
+var DB_URL;
 const port = process.env.PORT || 8080;
 
-var DB_URL;
+//Configuration Variables
 if (process.env.LOCAL === 'true') {
   DB_URL = config.get('dbURL');
 }
 else {
   DB_URL = process.env.dbURL;
 }
-
-
-setInterval(function () {
-  console.log('Waking up Heroku App');
-  https.get('https://reminder.herokuapp.com');
-}, 600000);
-
 
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
@@ -36,8 +30,12 @@ app.use(function (req, res, next) {
 //Reminders routes
 require('./app/routes')(app);
 
+//Connect to our DB
 mongoose.connect(DB_URL);
+
 var Reminder = mongoose.model("Reminders");
+
+//Sets initial Data when the App starts up
 Reminder.find({}, function (err, reminder) {
   if (err) {
     console.log('Error initializing data');

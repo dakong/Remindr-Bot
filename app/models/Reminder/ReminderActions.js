@@ -19,6 +19,7 @@ module.exports.create = function (text, time, date, recipientId) {
       "name": text,
       "time": time
     }).exec().then(function (reminders) {
+
       if (reminders === null) {
         var reminder = new Reminder();
         reminder.cronTime = date;
@@ -29,10 +30,12 @@ module.exports.create = function (text, time, date, recipientId) {
         new Promise(function (resolve, reject) {
           resolve(ReminderCount.getCount(recipientId));
         }).then(function (reminderCount) {
+
           reminder.reminderCount = reminderCount + 1;
           reminder.save(function (err, reminder) {
             if (err) {
-              return resolve({'success': false, 'msg': 'Error saving reminder ' + text});
+              //return resolve({'success': false, 'msg': 'Error saving reminder ' + text});
+              return next(err);
             }
             else {
               console.log('Reminder successfully created: ', reminder);
@@ -57,15 +60,15 @@ module.exports.create = function (text, time, date, recipientId) {
  * @returns {Promise}
  */
 module.exports.getReminder = function (reminderNumber, recipientId) {
-  console.log('==== Get Reminder ====');
-  console.log('reminder number: ', reminderNumber, 'recipient id', recipientId);
   return new Promise(function (resolve, reject) {
     Reminder.findOne({
       reminderCount: reminderNumber,
       recipientId: recipientId
     }, '_id name time reminderCount recipientId cronJobId', function (err, reminder) {
 
-      console.log('reminder object: ', reminder);
+      if(err){
+        return next(err);
+      }
       return resolve({
         id: reminder._id,
         name: reminder.name,
@@ -93,7 +96,7 @@ module.exports.addCronJob = function (reminder, jobId) {
     "cronJobId": jobId
   }, function (err) {
     if (err) {
-      console.log('error');
+      return next(err);
     }
     else {
       console.log('successfully added!');
@@ -117,46 +120,11 @@ module.exports.delete = function (reminderId, recipientId) {
   console.log('reminder id: ', reminderId, 'recipientId', recipientId);
   Reminder.findOneAndRemove({"_id": reminderId, "recipientId": recipientId}, function (err, removed) {
     if (err) {
-      console.log(err);
+      return next(err);
     }
     console.log('removed object: ', removed);
     ReminderCount.decrementCount(recipientId);
     sortReminders(recipientId);
-  });
-};
-
-module.exports.edit = function (reminder, time, sendMessage) {
-  Reminder.findOneAndUpdate({
-    "name": reminder
-  }, {
-    "time": time
-  }, function (err) {
-    if (err) {
-      sendMessage({'success': false, 'msg': 'Error editing ' + reminder});
-    }
-    else {
-      console.log('Reminder successfully edited');
-      sendMessage({'success': true});
-    }
-  });
-};
-
-module.exports.update = function (req, res) {
-  Reminder.findOne({
-    "_id": req.params.reminder_id
-  }, function (err, reminder) {
-
-    if (err) {
-      res.send(err);
-    }
-
-    reminder.name = req.body.name;
-    reminder.save(function (err) {
-      if (err) {
-        res.send(err);
-      }
-      res.send({message: 'Reminder successfully updated to: ' + reminder.name});
-    });
   });
 };
 
@@ -166,30 +134,20 @@ module.exports.update = function (req, res) {
  * @param recipientId
  */
 module.exports.clear = function (recipientId) {
-  console.log('clearing db for recipient: ', recipientId);
-  //Reminder.find({}, function (err, reminder) {
-  //  if (err) {
-  //    console.log(err);
-  //  } else {
-  //    reminder.forEach(function (element) {
-  //      stopCronJobs(element.cronJobId);
-  //    });
-  //  }
-  //});
   Reminder.collection.remove({'recipientId': recipientId});
   ReminderCount.clearCount(recipientId);
 };
 
-module.exports.getOne = function (req, res) {
-  Reminder.findOne({
-    "_id": req.params.reminder_id
-  }, function (err, reminder) {
-    if (err) {
-      res.send(err);
-    }
-    res.send(reminder);
-  });
-};
+// module.exports.getOne = function (req, res) {
+//   Reminder.findOne({
+//     "_id": req.params.reminder_id
+//   }, function (err, reminder) {
+//     if (err) {
+//       res.send(err);
+//     }
+//     res.send(reminder);
+//   });
+// };
 
 var sortReminders = function (recipientId) {
   Reminder.find({recipientId: recipientId}).sort({cronTime: 'asc'}).exec(function (err, reminders) {

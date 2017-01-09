@@ -266,7 +266,6 @@ const wit = new Wit({
 module.exports.userSentMessage = function (req, res) {
   var data = req.body;
   console.log('user sent message');
-  console.log('data: ', data);
   // Make sure this is a page subscription
   if (data.object == 'page') {
     // Iterate over each entry
@@ -354,54 +353,3 @@ function receivedAuthentication(event) {
   //comment for now`
   /*messageActions.sendTextMessage(senderID, "Authentication successful");*/
 }
-
-module.exports.getNews = function (req,res) {
-  var newsSource = req.params.source;
-  return fetch("https://newsapi.org/v1/articles?source=" + newsSource + "&apiKey=" + NEWS_API_KEY,{
-    method: 'get'
-  }).then(function(response){
-    return response.json();
-  }).then(function(data){
-    res.status(200).send(data);
-  }).catch(function(error){
-    console.log('oops an error occurred');
-    res.status(404).send(error);
-  });
-};
-
-module.exports.getWhiteList = function (req,res) {
-  return fetch("https://graph.facebook.com/v2.6/me/thread_settings?fields=whitelisted_domains&access_token="+FB_PAGE_TOKEN, {
-    method: 'get'
-  }).then(function(response){
-    return response.json();
-  }).then(function(data){
-    res.status(200).send(data);
-  }).catch(function(error){
-    console.log('oops an error occurred');
-    res.status(404).send(error);
-  });
-};
-
-module.exports.removeWhiteList = function (req,res) {
-  request({
-    uri: 'https://graph.facebook.com/me/thread_settings',
-    qs: {
-      access_token: FB_PAGE_TOKEN
-    },
-    method: 'POST',
-    json: {
-      setting_type: "domain_whitelisting",
-      whitelisted_domains : [
-  ],
-      domain_action_type : "remove"
-    }
-  }, function (error, response, body) {
-    if (!error && response.statusCode === 200) {
-      res.status(200).send(response);
-    } else {
-      console.error('Unable to clear white list.');
-      console.error(error);
-      res.status(404).send(error);
-    }
-  });
-};
