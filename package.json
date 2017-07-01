@@ -6,10 +6,11 @@
     "ngrok": "./ngrok http 8080",
     "dev": "LOCAL='true' nodemon app.js"
   },
-  "engines" : {
+  "engines": {
     "node": "6.6.0"
   },
   "dependencies": {
+    "apiai": "^4.0.2",
     "body-parser": "~1.0.1",
     "circular-json": "^0.3.1",
     "config": "^1.21.0",
