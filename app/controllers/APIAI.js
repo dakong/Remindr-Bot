@@ -15,28 +15,27 @@ let DEV_RECIPIENT_ID = '12345';
 
 /**
  *
- * @param {Object} AIResult the result key from the API.AI return object
+ * @param {Object} responseData the result key from the API.AI return object
  * @returns {*} A promise if the action is valid and complete. It will return
  * an object otherwise.
- * @constructor
  */
-function HandleAction(AIResult) {
+function handleAction(responseData) {
 
   // When the action is incomplete, return default from API.Ai
-  if (AIResult.actionIncomplete) {
+  if (responseData.actionIncomplete) {
     return {
       success: true, incomplete: true
     }
   }
 
-  //Statements to handle the different actions our message bot can take
-  switch (AIResult.action) {
+  //Handle the different actions our message bot can take
+  switch (responseData.action) {
 
     case ACTIONS.ADD_REMINDER:
-      return AddReminder(AIResult);
+      return addReminder(responseData);
 
     case ACTIONS.LIST_REMINDERS:
-      break;
+      return listReminders(responseData);
 
     case ACTIONS.DELETE_REMINDER:
       break;
@@ -50,29 +49,74 @@ function HandleAction(AIResult) {
 
 /**
  * Handles the case for when a user wants to add a reminder.
- * @param {Object} AIResult
+ * @param {Object} responseData
  * @returns {Promise}
- * @constructor
  */
-function AddReminder(AIResult) {
-
+function addReminder(responseData) {
+  console.log(responseData);
   return new Promise(function (resolve, reject) {
 
-    if(AIResult.parameters.date === "TODAY"){
-      AIResult.parameters.date = moment().format("YYYY-M-D");
+    if(responseData.parameters.date === "TODAY"){
+      responseData.parameters.date = moment().format("YYYY-M-D");
     }
 
-    let reminderToBeSaved = Object.assign(AIResult.parameters,
+    let reminderToBeSaved = Object.assign(responseData.parameters,
       { recipientId: DEV_RECIPIENT_ID });
 
     Reminders.actions.create(reminderToBeSaved)
       .then(function (result) {
-        resolve(result);
+
+        let res = {};
+
+        if(result.success){
+          res = Object.assign(result,
+            { msg: responseData.fulfillment.speech });
+        }
+        else{
+          res = Object.assign({}, result);
+        }
+
+        resolve(res);
       })
       .catch(function (err) {
         reject(err);
       });
   });
+}
+/**
+ * Handles the case when a user wants to view all their reminders
+ * @param responseData
+ * @returns {Promise}
+ */
+function listReminders(responseData) {
+  return new Promise(function (resolve, reject) {
+    Reminders.actions.getAll(DEV_RECIPIENT_ID)
+      .then(function (result) {
+
+        let listMsg = createListMsg(responseData.fulfillment.speech,
+          result.reminders);
+
+        let res = Object.assign(result, {msg: listMsg});
+
+        resolve(res);
+      })
+      .catch(function (err) {
+        reject(err);
+      });
+  });
+}
+
+/**
+ * Formats the msg that is to be sent back to the user, for listing reminders
+ * @param baseText
+ * @param reminderArray
+ * @returns {string}
+ */
+function createListMsg(baseText, reminderArray){
+  let reminderList = reminderArray.reduce(function(acc, curr) {
+    return acc + '\n' + curr.name;
+  }, "");
+  return baseText + reminderList;
 }
 /**
  * Given a user message execute the action returned by API.AI.
@@ -88,18 +132,12 @@ function HandleMessage(req, res) {
     sessionId: sessionId
   };
 
-  ProcessQuery(msg, options)
+  processQuery(msg, options)
     .then(function (queryResponse) {
-      return Promise.all([queryResponse, HandleAction(queryResponse.result)]);
+      return Promise.all([queryResponse, handleAction(queryResponse.result)]);
     })
     .then(function (result) {
-      console.log(result);
-      if (result[1].success) {
-        res.status(200).send(result[0].result.fulfillment.speech);
-      }
-      else {
-        res.status(200).send(result[1].msg);
-      }
+      res.status(200).send(result[1].msg);
     })
     .catch(function (err) {
       console.log(err);
@@ -112,7 +150,7 @@ function HandleMessage(req, res) {
  * @param {String} text A message that needs to be processed.
  * @param {Object} options Holds the sessionID that is sent along with the message.
  */
-function ProcessQuery(text, options) {
+function processQuery(text, options) {
   return new Promise(function (resolve, reject) {
     let request = app.textRequest(text, options);
 

@@ -75,19 +75,16 @@ module.exports.actions.create = function (reminderData) {
  * @returns {Promise}
  */
 module.exports.actions.getAll = function (recipientId) {
-  //return new Promise(function (resolve, reject) {
-  //  let promise = Reminder.find({recipientId: recipientId}).sort({reminderCount: 'asc'}).exec();
-  //  promise.then(function (reminders) {
-  //    return resolve(reminders);
-  //  });
-  //});
-
   return new Promise(function (resolve, reject) {
     Reminder
       .find({recipientId: recipientId})
       .sort({reminderCount: 'asc'})
-      .exec();
-
+      .exec()
+      .then(function (reminders) {
+        resolve({'success': true, 'reminders': reminders});
+       }, function(){
+        reject({'success': false, 'msg': "Error listing reminders"});
+      });
   });
 };
 
