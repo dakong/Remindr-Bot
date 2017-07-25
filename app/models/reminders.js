@@ -1,10 +1,10 @@
-var mongoose = require('mongoose'),
+let mongoose = require('mongoose'),
   Schema = mongoose.Schema,
   moment = require('moment'),
   ReminderCount = require('./userReminderCount.js');
 
 //Schema for our Reminders
-var ReminderSchema = new Schema({
+let ReminderSchema = new Schema({
   name: String,
   time: String,
   cronJobId: String,
@@ -13,52 +13,84 @@ var ReminderSchema = new Schema({
   reminderCount: Number
 });
 
-var Reminder = mongoose.model("Reminders", ReminderSchema);
+let Reminder = mongoose.model("Reminders", ReminderSchema);
 module.exports.actions = {};
 
 /**
- * Create a Reminder and save it to our Database
- * @param text
- * @param time
- * @param date
- * @param recipientId
+ * Creates a new Reminder object with the correct populated fields
+ * @param text of the action that is to be reminded
+ * @param time when the reminder should be sent out
+ * @param date of when the reminder should be sent out
+ * @param recipientId the id of the user that should be reminded
  */
-module.exports.actions.create = function (text, time, date, recipientId) {
-  return new Promise(function (resolve, reject) {
-    Reminder.findOne({
-      "name": text,
-      "time": time
-    }).exec().then(function (reminders) {
-      if (reminders === null) {
-        var reminder = new Reminder();
-        reminder.cronTime = date;
-        reminder.name = text;
-        reminder.time = time;
-        reminder.recipientId = recipientId;
+function CreateReminder(text, time, date, recipientId) {
 
-        new Promise(function (resolve, reject) {
-          resolve(ReminderCount.actions.getCount(recipientId));
-        }).then(function (reminderCount) {
-          reminder.reminderCount = reminderCount + 1;
-          reminder.save(function (err, reminder) {
-            if (err) {
-              return resolve({'success': false, 'msg': 'Error saving reminder ' + text});
-            }
-            else {
-              console.log('Reminder successfully created: ', reminder);
-              ReminderCount.actions.incrementCount(recipientId);
-              sortReminders(recipientId);
-              return resolve({'success': true, 'reminder': reminder});
-            }
-          });
+  let reminder = new Reminder();
+
+  reminder.cronTime = date;
+  reminder.name = text;
+  reminder.time = time;
+  reminder.recipientId = recipientId;
+
+  return reminder;
+}
+
+/**
+ * Create a Reminder and save it to our Database
+ * @param {Object} reminderData
+ * @returns {Promise}
+ */
+module.exports.actions.create = function (reminderData) {
+
+  return new Promise(function(resolve, reject) {
+    Reminder.findOne({
+      "name": reminderData.reminder,
+      "time": reminderData.time
+    }).exec().then(function (result) {
+
+      if(result === null) {
+        let reminder = CreateReminder(reminderData.reminder,
+          reminderData.time, reminderData.date,
+          reminderData.recipientId);
+
+        reminder.save().then(function(res){
+          resolve({'success': true, 'reminder': res});
+
+        },function(){
+          reject(Error("It Broke"));
         });
       }
-      else {
-        return resolve({'success': false, 'msg': 'Error saving reminder ' + text});
+      else{
+        resolve({'msg': "Duplicate Reminder", 'success': false});
       }
+
+    }, function () {
+      reject(Error("It Broke"));
     });
   });
 };
+
+/**
+ * Returns a list of all Reminders
+ * @returns {Promise}
+ */
+module.exports.actions.getAll = function (recipientId) {
+  //return new Promise(function (resolve, reject) {
+  //  let promise = Reminder.find({recipientId: recipientId}).sort({reminderCount: 'asc'}).exec();
+  //  promise.then(function (reminders) {
+  //    return resolve(reminders);
+  //  });
+  //});
+
+  return new Promise(function (resolve, reject) {
+    Reminder
+      .find({recipientId: recipientId})
+      .sort({reminderCount: 'asc'})
+      .exec();
+
+  });
+};
+
 
 /**
  * Returns a JavaScript Reminder Object given the number of the reminder
@@ -67,8 +99,6 @@ module.exports.actions.create = function (text, time, date, recipientId) {
  * @returns {Promise}
  */
 module.exports.actions.getReminder = function (reminderNumber, recipientId) {
-  console.log('==== Get Reminder ====');
-  console.log('reminder number: ', reminderNumber, 'recipient id', recipientId);
   return new Promise(function (resolve, reject) {
     Reminder.findOne({
       reminderCount: reminderNumber,
@@ -91,7 +121,6 @@ module.exports.actions.getReminder = function (reminderNumber, recipientId) {
 /**
  * Add a cronJob to a reminder
  * @param reminder
- * @param time
  * @param jobId
  */
 module.exports.actions.addCronJob = function (reminder, jobId) {
@@ -109,18 +138,6 @@ module.exports.actions.addCronJob = function (reminder, jobId) {
       console.log('successfully added!');
     }
   })
-};
-/**
- * Returns a list of all Reminders
- * @returns {Promise}
- */
-module.exports.actions.getAll = function (recipientId) {
-  return new Promise(function (resolve, reject) {
-    var promise = Reminder.find({recipientId: recipientId}).sort({reminderCount: 'asc'}).exec();
-    promise.then(function (reminders) {
-      return resolve(reminders);
-    });
-  });
 };
 
 module.exports.actions.delete = function (reminderId, recipientId) {
@@ -201,7 +218,7 @@ module.exports.actions.getOne = function (req, res) {
   });
 };
 
-var sortReminders = function (recipientId) {
+let sortReminders = function (recipientId) {
   Reminder.find({recipientId: recipientId}).sort({cronTime: 'asc'}).exec(function (err, reminders) {
     for (var i = 0, len = reminders.length; i < len; i++) {
       reminders[i].reminderCount = i + 1;

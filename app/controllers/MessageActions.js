@@ -1,4 +1,4 @@
-var Reminders = require('../models/reminders.js'),
+let Reminders = require('../models/reminders.js'),
   fs = require('fs'),
   CronJob = require('cron').CronJob,
   moment = require('moment'),
@@ -6,18 +6,24 @@ var Reminders = require('../models/reminders.js'),
   config = require('config'),
   uuid = require('uuid');
 
-var PAGE_ACCESS_TOKEN;
+let PAGE_ACCESS_TOKEN;
+
 if (process.env.LOCAL === 'true') {
+
   PAGE_ACCESS_TOKEN = config.get('pageAccessToken');
 }
 else {
   PAGE_ACCESS_TOKEN = process.env.pageAccessToken;
 }
 
-var exports = module.exports = {};
-var cronHash = {};
+// TODO REMEMBER TO REMOVE LATER!!!
+// Fake recipient ID for development purposes
+let DEV_RECIPIENT_ID = '12345';
 
-var callSendAPI = function (messageData) {
+var exports = module.exports = {};
+let cronHash = {};
+
+let callSendAPI = function (messageData) {
   request({
     uri: 'https://graph.facebook.com/v2.6/me/messages',
     qs: {
@@ -28,8 +34,8 @@ var callSendAPI = function (messageData) {
   }, function (error, response, body) {
     if (!error && response.statusCode === 200) {
       console.log('Call send api success');
-      var recipientId = body.recipient_id;
-      var messageId = body.message_id;
+      let recipientId = body.recipient_id;
+      let messageId = body.message_id;
 
     } else {
       console.error('Unable to send Message.');
@@ -42,10 +48,10 @@ var callSendAPI = function (messageData) {
  * Function that forms the message that the bot will send as a reminder to the user
  * @param {Object} reminder
  */
-var sendReminderMessage = function (reminder) {
+let sendReminderMessage = function (reminder) {
   console.log('BOT IS SENDING A REMINDER and deleting: ', reminder._id);
   Reminders.actions.delete(reminder._id, reminder.recipientId);
-  var messageData = {
+  let messageData = {
     recipient: {
       id: reminder.recipientId
     },
@@ -64,7 +70,7 @@ exports.setInitialData = function (reminder) {
   console.log('creating cron jobs from the database');
   reminder.forEach(function (element) {
 
-    var cronDate = new Date(element.cronTime);
+    let cronDate = new Date(element.cronTime);
     console.log('creating cron job at ' + cronDate);
     cronHash[element.cronJobId] = new CronJob({
       cronTime: cronDate,
@@ -84,12 +90,12 @@ exports.setInitialData = function (reminder) {
  */
 exports.sendReminderList = function (recipientId) {
   return new Promise(function (resolve, reject) {
-    var promise = new Promise(function (resolve, reject) {
+    let promise = new Promise(function (resolve, reject) {
       resolve(Reminders.actions.getAll(recipientId));
     });
     promise.then(function (reminderArray) {
-      var reminderList;
-      var reminderNames = reminderArray.map(function (reminder) {
+      let reminderList;
+      let reminderNames = reminderArray.map(function (reminder) {
         return reminder.reminderCount + ') ' + reminder.name + ' on ' + reminder.time;
       });
       if (reminderNames.length) {
@@ -106,24 +112,44 @@ exports.sendReminderList = function (recipientId) {
   });
 };
 
+///**
+// * Adds a reminder task and saves the time, date, and recipientId to the database
+// * @param {String} reminderTask
+// * @param {String} time
+// * @param {String} date
+// * @param {String} recipientId
+// */
+//exports.addReminder = function (reminderTask, time, date, recipientId) {
+//  new Promise(function (resolve, reject) {
+//    resolve(Reminders.actions.create(reminderTask, time, date, recipientId));
+//  }).then(function (result) {
+//    addCronJob(result.success, result.reminder, date);
+//  });
+//};
+
 /**
- * Adds a reminder task and saves the time, date, and recipientId to the database
- * @param {String} reminderTask
- * @param {String} time
- * @param {String} date
- * @param {String} recipientId
+ *
+ * @param {Object} queryResult holds the response information from API.AI.
+ * @returns {*}
  */
-exports.addReminder = function (reminderTask, time, date, recipientId) {
-  new Promise(function (resolve, reject) {
-    resolve(Reminders.actions.create(reminderTask, time, date, recipientId));
-  }).then(function (result) {
-    addCronJob(result.success, result.reminder, date);
-  });
+exports.addReminder = function(queryResult) {
+
+  //Only if the result is complete do we add the reminder to the database.
+
+  let {date, reminder, time} = queryResult.parameters;
+
+  if(date === "TODAY"){
+    date = moment().format("YYYY-M-D");
+  }
+
+  return Reminders.actions.create(reminder, time, date, DEV_RECIPIENT_ID);
+
+
 };
 
-var addCronJob = function (success, reminder, date) {
+let addCronJob = function (success, reminder, date) {
   if (success) {
-    var cronId = uuid.v4();
+    let cronId = uuid.v4();
     //create our cron job
     cronHash[cronId] = new CronJob({
       cronTime: new Date(date),
@@ -143,7 +169,7 @@ var addCronJob = function (success, reminder, date) {
  */
 exports.deleteReminder = function (reminderNumber, recipientId) {
   console.log('delete reminder: ', reminderNumber);
-  var promise = new Promise(function (resolve, reject) {
+  let promise = new Promise(function (resolve, reject) {
     resolve(Reminders.actions.getReminder(reminderNumber, recipientId));
   });
   promise.then(function (result) {
@@ -161,7 +187,7 @@ exports.deleteReminder = function (reminderNumber, recipientId) {
  * @param {String} recipientId
  */
 exports.clearReminders = function (recipientId) {
-  for (var jobId in cronHash) {
+  for (let jobId in cronHash) {
     if (cronHash.hasOwnProperty(jobId)) {
       cronHash[jobId].stop();
     }

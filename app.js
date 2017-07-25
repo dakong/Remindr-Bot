@@ -18,11 +18,12 @@ else {
   DB_URL = process.env.dbURL;
 }
 
+// Comment Out Heroku Ping
 
-setInterval(function () {
-  console.log('Waking up Heroku App');
-  https.get('https://reminder.herokuapp.com');
-}, 600000);
+//setInterval(function () {
+//  console.log('Waking up Heroku App');
+//  https.get('https://reminder.herokuapp.com');
+//}, 600000);
 
 
 app.use(bodyParser.urlencoded({extended: true}));
@@ -37,7 +38,7 @@ app.use(function (req, res, next) {
 require('./app/routes')(app);
 
 mongoose.connect(DB_URL);
-var Reminder = mongoose.model("Reminders");
+let Reminder = mongoose.model("Reminders");
 Reminder.find({}, function (err, reminder) {
   if (err) {
     console.log('Error initializing data');
