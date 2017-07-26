@@ -23,44 +23,9 @@ let DEV_RECIPIENT_ID = '12345';
 var exports = module.exports = {};
 let cronHash = {};
 
-let callSendAPI = function (messageData) {
-  request({
-    uri: 'https://graph.facebook.com/v2.6/me/messages',
-    qs: {
-      access_token: PAGE_ACCESS_TOKEN
-    },
-    method: 'POST',
-    json: messageData
-  }, function (error, response, body) {
-    if (!error && response.statusCode === 200) {
-      console.log('Call send api success');
-      let recipientId = body.recipient_id;
-      let messageId = body.message_id;
 
-    } else {
-      console.error('Unable to send Message.');
-      console.error(error);
-    }
-  })
-};
 
-/**
- * Function that forms the message that the bot will send as a reminder to the user
- * @param {Object} reminder
- */
-let sendReminderMessage = function (reminder) {
-  console.log('BOT IS SENDING A REMINDER and deleting: ', reminder._id);
-  Reminders.actions.delete(reminder._id, reminder.recipientId);
-  let messageData = {
-    recipient: {
-      id: reminder.recipientId
-    },
-    message: {
-      text: 'Hey I\'m reminding you to ' + reminder.name
-    }
-  };
-  callSendAPI(messageData);
-};
+
 
 /**
  * When the server initializes, it will grab the cron jobs info from the database and create them.

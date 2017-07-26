@@ -1,13 +1,19 @@
 const Reminders      = require('../models/reminders.js'),
       apiai          = require('apiai'),
       messageActions = require('./MessageActions.js'),
+      CronJob        = require('cron').CronJob,
       config         = require('config'),
       moment         = require('moment'),
+      request        = require('request'),
+      uuid           = require('uuid'),
       ACTIONS        = require('../constants/actions.js');
 
 //Developer access token
-const AI_ACCESS_TOKEN = config.get("API_AI_ClientToken");
-const app             = apiai(AI_ACCESS_TOKEN);
+const AI_ACCESS_TOKEN   = config.get("API_AI_ClientToken");
+const app               = apiai(AI_ACCESS_TOKEN);
+const PAGE_ACCESS_TOKEN = config.get('pageAccessToken');
+
+let cronHash         = {};
 let DEV_RECIPIENT_ID = '12345';
 
 
@@ -53,26 +59,35 @@ function handleAction(responseData) {
  * @returns {Promise}
  */
 function addReminder(responseData) {
-  console.log(responseData);
+
   return new Promise(function (resolve, reject) {
 
-    if(responseData.parameters.date === "TODAY"){
+    if (responseData.parameters.date === "TODAY") {
       responseData.parameters.date = moment().format("YYYY-M-D");
     }
 
     let reminderToBeSaved = Object.assign(responseData.parameters,
-      { recipientId: DEV_RECIPIENT_ID });
+      {recipientId: DEV_RECIPIENT_ID});
 
     Reminders.actions.create(reminderToBeSaved)
       .then(function (result) {
 
         let res = {};
+        if (result.success) {
+          console.log('hello world');
+          let reminder = responseData.parameters.reminder,
+              date     = responseData.parameters.date,
+              time     = responseData.parameters.time;
 
-        if(result.success){
+          //datetime used for cronjob
+          let datetime = new Date(`${date} ${time}`);
+
+          addCronJob(reminder, datetime);
+
           res = Object.assign(result,
-            { msg: responseData.fulfillment.speech });
+            {msg: responseData.fulfillment.speech});
         }
-        else{
+        else {
           res = Object.assign({}, result);
         }
 
@@ -83,6 +98,62 @@ function addReminder(responseData) {
       });
   });
 }
+
+function addCronJob(reminder, date) {
+
+  let cronId       = uuid.v4();
+  //create our cron job
+  cronHash[cronId] = new CronJob({
+    cronTime: new Date(date),
+    onTick  : function () {
+      sendReminderMessage(reminder);
+    },
+    start   : true,
+    timeZone: 'America/Los_Angeles'
+  });
+  Reminders.actions.addCronJob(reminder, cronId);
+
+}
+
+/**
+ * Function that forms the message that the bot will send as a reminder to the user
+ * @param {Object} reminder
+ */
+function sendReminderMessage(reminder) {
+  console.log('BOT IS SENDING A REMINDER and deleting: ', reminder._id);
+  Reminders.actions.delete(reminder._id, reminder.recipientId);
+  let messageData = {
+    recipient: {
+      id: reminder.recipientId
+    },
+    message  : {
+      text: 'Hey I\'m reminding you to ' + reminder.name
+    }
+  };
+  //callSendAPI(messageData);
+}
+
+let callSendAPI = function (messageData) {
+  request({
+    uri   : 'https://graph.facebook.com/v2.6/me/messages',
+    qs    : {
+      access_token: PAGE_ACCESS_TOKEN
+    },
+    method: 'POST',
+    json  : messageData
+  }, function (error, response, body) {
+    if (!error && response.statusCode === 200) {
+      console.log('Call send api success');
+      let recipientId = body.recipient_id;
+      let messageId   = body.message_id;
+
+    } else {
+      console.error('Unable to send Message.');
+      console.error(error);
+    }
+  })
+};
+
 /**
  * Handles the case when a user wants to view all their reminders
  * @param responseData
@@ -112,12 +183,33 @@ function listReminders(responseData) {
  * @param reminderArray
  * @returns {string}
  */
-function createListMsg(baseText, reminderArray){
-  let reminderList = reminderArray.reduce(function(acc, curr) {
+function createListMsg(baseText, reminderArray) {
+  let reminderList = reminderArray.reduce(function (acc, curr) {
     return acc + '\n' + curr.name;
   }, "");
   return baseText + reminderList;
 }
+
+/**
+ * Sends the text to API AI to process to query.
+ * @param {String} text A message that needs to be processed.
+ * @param {Object} options Holds the sessionID that is sent along with the message.
+ */
+function processQuery(text, options) {
+  return new Promise(function (resolve, reject) {
+    let request = app.textRequest(text, options);
+
+    request.on('response', function (response) {
+      resolve(response);
+    });
+
+    request.on('error', function (error) {
+      reject(error);
+    });
+    request.end();
+  });
+}
+
 /**
  * Given a user message execute the action returned by API.AI.
  * @param req
@@ -143,26 +235,6 @@ function HandleMessage(req, res) {
       console.log(err);
       res.status(500).send({msg: "Server Error"});
     });
-}
-
-/**
- * Sends the text to API AI to process to query.
- * @param {String} text A message that needs to be processed.
- * @param {Object} options Holds the sessionID that is sent along with the message.
- */
-function processQuery(text, options) {
-  return new Promise(function (resolve, reject) {
-    let request = app.textRequest(text, options);
-
-    request.on('response', function (response) {
-      resolve(response);
-    });
-
-    request.on('error', function (error) {
-      reject(error);
-    });
-    request.end();
-  });
 }
 
 module.exports = {HandleMessage};

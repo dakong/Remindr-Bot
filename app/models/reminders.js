@@ -41,37 +41,42 @@ function CreateReminder(text, time, date, recipientId) {
  * @returns {Promise}
  */
 module.exports.actions.create = function (reminderData) {
-
+  console.log('inside mongodb create');
   return new Promise(function(resolve, reject) {
-    Reminder.findOne({
-      "name": reminderData.reminder,
-      "time": reminderData.time
-    }).exec().then(function (result) {
+    //Check to see if there is already an existing reminder with the
+    //same name and time
+    Reminder
+      .findOne({
+        "name": reminderData.reminder,
+        "time": reminderData.time
+      })
+      .exec()
+      .then(function (result) {
 
-      if(result === null) {
-        let reminder = CreateReminder(reminderData.reminder,
-          reminderData.time, reminderData.date,
-          reminderData.recipientId);
+        //Only create a new reminder if it already doesn't exist in the db
+        if(result === null) {
+          let reminder = CreateReminder(reminderData.reminder,
+            reminderData.time, reminderData.date,
+            reminderData.recipientId);
 
-        reminder.save().then(function(res){
-          resolve({'success': true, 'reminder': res});
+          reminder.save().then(function(res){
+            resolve({'success': true, 'reminder': res});
 
-        },function(){
-          reject(Error("It Broke"));
-        });
-      }
-      else{
-        resolve({'msg': "Duplicate Reminder", 'success': false});
-      }
-
-    }, function () {
-      reject(Error("It Broke"));
-    });
+          },function(){
+            reject(Error("It Broke"));
+          });
+        }
+        else{
+          resolve({'msg': "Duplicate Reminder", 'success': false});
+        }
+      }, function () {
+        reject(Error("It Broke"));
+      });
   });
 };
 
 /**
- * Returns a list of all Reminders
+ * Shows a list of Users reminders
  * @returns {Promise}
  */
 module.exports.actions.getAll = function (recipientId) {
@@ -87,7 +92,6 @@ module.exports.actions.getAll = function (recipientId) {
       });
   });
 };
-
 
 /**
  * Returns a JavaScript Reminder Object given the number of the reminder
@@ -149,44 +153,8 @@ module.exports.actions.delete = function (reminderId, recipientId) {
   });
 };
 
-module.exports.actions.edit = function (reminder, time, sendMessage) {
-  Reminder.findOneAndUpdate({
-    "name": reminder
-  }, {
-    "time": time
-  }, function (err) {
-    if (err) {
-      sendMessage({'success': false, 'msg': 'Error editing ' + reminder});
-    }
-    else {
-      console.log('Reminder successfully edited');
-      sendMessage({'success': true});
-    }
-  });
-};
-
-module.exports.actions.update = function (req, res) {
-  Reminder.findOne({
-    "_id": req.params.reminder_id
-  }, function (err, reminder) {
-
-    if (err) {
-      res.send(err);
-    }
-
-    reminder.name = req.body.name;
-    reminder.save(function (err) {
-      if (err) {
-        res.send(err);
-      }
-      res.send({message: 'Reminder successfully updated to: ' + reminder.name});
-    });
-  });
-};
-
 /**
  * Clears all reminders from database, and stops their cron jobs
- * @param stopCronJobs
  * @param recipientId
  */
 module.exports.actions.clear = function (recipientId) {
